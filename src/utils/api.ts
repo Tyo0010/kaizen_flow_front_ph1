@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = 'https://hk3gfh3zy5.execute-api.ap-southeast-5.amazonaws.com/main'
+export const API_BASE_URL = 'https://hk3gfh3zy5.execute-api.ap-southeast-5.amazonaws.com/main/api'
 
 // Helper function to get auth headers
 export const getAuthHeaders = () => {
