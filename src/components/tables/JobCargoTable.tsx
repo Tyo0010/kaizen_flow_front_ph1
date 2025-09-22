@@ -24,6 +24,11 @@ export interface DisplayJobCargoItem {
   statisticalQty_confidence?: number;
   statisticalUOM: string;
   statisticalUOM_confidence?: number;
+  // K9 Form specific fields
+  packQtyToBeReleased?: number;
+  packQtyToBeReleased_confidence?: number;
+  packUOMToBeReleased?: string;
+  packUOMToBeReleased_confidence?: number;
 }
 
 export interface JobCargoTableProps {

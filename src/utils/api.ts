@@ -1,5 +1,51 @@
 // API Configuration
-export const API_BASE_URL = 'https://hk3gfh3zy5.execute-api.ap-southeast-5.amazonaws.com/main/api'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+
+// ========================================
+// SESSION ISSUES API INTERFACES
+// ========================================
+
+export interface SessionVerificationIssue {
+    affectedItems: string[]
+    issue: string
+    sourceDocument: string
+}
+
+export interface SessionIssuesResponse {
+    session_id: string
+    session_info: {
+        session_status: string
+        format_validation_enabled: boolean
+        total_documents: number
+        successful_documents: number
+        failed_documents: number
+        created_at: string
+        updated_at: string
+    }
+    session_issues?: SessionVerificationIssue[] | {
+        cancelled_at?: string
+        cancelled_by?: string
+        reason?: string
+        total_refund?: number
+        documents_cancelled?: number
+    } | null
+    document_issues: Array<{
+        document_id: string
+        document_name: string
+        original_filename: string
+        processing_status: string
+        error_message?: string | null
+        file_type: string
+        file_size: number
+        created_at: string
+    }>
+    has_issues: boolean
+    issue_summary: {
+        session_level_issues: number
+        document_level_issues: number
+        total_failed_documents: number
+    }
+}
 
 // Helper function to get auth headers
 export const getAuthHeaders = () => {
@@ -24,6 +70,18 @@ export const handleApiResponse = async (response: Response) => {
             localStorage.removeItem('user')
             window.location.href = '/'
             throw new Error('Session expired. Please login again.')
+        }
+        
+        if (response.status === 404) {
+            const errorData = await response.json().catch(() => ({ error: 'Resource not found' }))
+            // Check for specific session-related 404 errors
+            if (errorData.error === 'Session not found') {
+                throw new Error('Session not found. The session may have expired or been deleted.')
+            }
+            if (errorData.error === 'Upload session not found') {
+                throw new Error('Upload session not found. Please try uploading again.')
+            }
+            throw new Error(errorData.error || errorData.message || 'Resource not found')
         }
         
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
@@ -143,6 +201,15 @@ export const getSessionStatus = async (sessionId: string) => {
     return handleApiResponse(response)
 }
 
+// Get session issues for verification problems
+export const getSessionIssues = async (sessionId: string): Promise<SessionIssuesResponse> => {
+    const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/issues`, {
+        headers: getAuthHeaders()
+    })
+    
+    return handleApiResponse(response)
+}
+
 // Get processed data for preview using session_id
 export const getSessionProcessedData = async (sessionId: string) => {
     console.log('getSessionProcessedData called with sessionId:', sessionId)
@@ -186,6 +253,148 @@ export const generateExcelFiles = async (sessionId: string, processedData: any) 
         body: JSON.stringify({
             processed_output: processedData
         })
+    })
+    
+    return handleApiResponse(response)
+}
+
+// Get session processed files
+export const getSessionProcessedFiles = async (sessionId: string) => {
+    const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/processed`, {
+        headers: getAuthHeaders()
+    })
+    
+    return handleApiResponse(response)
+}
+
+// Process documents with format validation bypass
+export const processWithBypass = async (sessionId: string) => {
+    const response = await fetch(`${API_BASE_URL}/documents/process-with-bypass`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+            session_id: sessionId
+        })
+    })
+    
+    return handleApiResponse(response)
+}
+
+// Cancel processing and refund usage
+export const cancelProcessing = async (sessionId: string) => {
+    const response = await fetch(`${API_BASE_URL}/documents/cancel-processing`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+            session_id: sessionId
+        })
+    })
+    
+    return handleApiResponse(response)
+}
+
+// Get all documents with pagination and filtering support
+export const getAllDocuments = async (params?: {
+    page?: number
+    per_page?: number
+    status?: string
+    format_id?: string
+    session_id?: string
+    include_sessions?: boolean
+}) => {
+    const queryParams = new URLSearchParams()
+    
+    // Always include page parameter (defaults to 1 if not provided)
+    queryParams.append('page', (params?.page || 1).toString())
+    
+    // Only include per_page if specified (backend will use default if not provided)
+    if (params?.per_page) {
+        queryParams.append('per_page', params.per_page.toString())
+    }
+    
+    // Add optional filter parameters only if they have values
+    if (params?.status) queryParams.append('status', params.status)
+    if (params?.format_id) queryParams.append('format_id', params.format_id)
+    if (params?.session_id) queryParams.append('session_id', params.session_id)
+    if (params?.include_sessions) queryParams.append('include_sessions', 'true')
+    
+    const url = `${API_BASE_URL}/documents/all?${queryParams.toString()}`
+    console.log('Fetching documents from URL:', url)
+    
+    const response = await fetch(url, {
+        headers: getAuthHeaders()
+    })
+    
+    return handleApiResponse(response)
+}
+
+// Get processed documents with pagination and filtering support
+export const getProcessedDocuments = async (params?: {
+    page?: number
+    per_page?: number
+    format_id?: string
+    session_id?: string
+}) => {
+    const queryParams = new URLSearchParams()
+    
+    // Always include page parameter (defaults to 1 if not provided)
+    queryParams.append('page', (params?.page || 1).toString())
+    
+    // Only include per_page if specified (backend will use default if not provided)
+    if (params?.per_page) {
+        queryParams.append('per_page', params.per_page.toString())
+    }
+    
+    // Add optional filter parameters only if they have values
+    if (params?.format_id) queryParams.append('format_id', params.format_id)
+    if (params?.session_id) queryParams.append('session_id', params.session_id)
+    
+    const url = `${API_BASE_URL}/documents/processed?${queryParams.toString()}`
+    console.log('Fetching processed documents from URL:', url)
+    
+    const response = await fetch(url, {
+        headers: getAuthHeaders()
+    })
+    
+    return handleApiResponse(response)
+}
+
+// Get documents using the new unified V2 API that combines both /all and /processed endpoints
+export const getDocumentsV2 = async (params?: {
+    page?: number
+    per_page?: number
+    status?: string
+    format_id?: string
+    session_id?: string
+    group_by_session?: boolean
+    include_processed_files?: boolean
+    include_sessions?: boolean
+}) => {
+    const queryParams = new URLSearchParams()
+    
+    // Always include page parameter (defaults to 1 if not provided)
+    queryParams.append('page', (params?.page || 1).toString())
+    
+    // Only include per_page if specified (backend will use default if not provided)
+    if (params?.per_page) {
+        queryParams.append('per_page', params.per_page.toString())
+    }
+    
+    // Add optional filter parameters only if they have values
+    if (params?.status) queryParams.append('status', params.status)
+    if (params?.format_id) queryParams.append('format_id', params.format_id)
+    if (params?.session_id) queryParams.append('session_id', params.session_id)
+    
+    // Add boolean parameters only if they are explicitly true
+    if (params?.group_by_session) queryParams.append('group_by_session', 'true')
+    if (params?.include_processed_files) queryParams.append('include_processed_files', 'true')
+    if (params?.include_sessions) queryParams.append('include_sessions', 'true')
+    
+    const url = `${API_BASE_URL}/documents/v2/all?${queryParams.toString()}`
+    console.log('Fetching documents from V2 API URL:', url)
+    
+    const response = await fetch(url, {
+        headers: getAuthHeaders()
     })
     
     return handleApiResponse(response)
@@ -251,9 +460,10 @@ export const confirmUpload = async (uploadSessionId: string, formatId: string, f
     s3_key: string
     filename: string
     size: number
-}>) => {
+}>, formatValidator: boolean = true) => {
     console.log('Confirming upload for session:', uploadSessionId)
     console.log('Files to confirm:', files)
+    console.log('Format validator enabled:', formatValidator)
     
     const response = await fetch(`${API_BASE_URL}/documents/upload-confirm`, {
         method: 'POST',
@@ -261,7 +471,8 @@ export const confirmUpload = async (uploadSessionId: string, formatId: string, f
         body: JSON.stringify({
             upload_session_id: uploadSessionId,
             format_id: formatId,
-            files
+            files,
+            format_validator: formatValidator
         })
     })
     

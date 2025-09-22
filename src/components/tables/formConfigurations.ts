@@ -27,6 +27,21 @@ export const K2_FORM_COLUMNS: JobCargoColumn[] = [
   { key: 'itemDescription3', label: 'Description 3', width: 'min-w-[120px]' },
 ];
 
+export const K9_FORM_COLUMNS: JobCargoColumn[] = [
+  { key: 'countryOfOrigin', label: 'Country', width: 'min-w-[50px]' },
+  { key: 'hsCode', label: 'HS Code', width: 'min-w-[80px]' },
+  { key: 'statisticalQty', label: 'Stat Qty', width: 'min-w-[50px]', type: 'number' },
+  { key: 'statisticalUOM', label: 'Stat UOM', width: 'min-w-[40px]' },
+  { key: 'declaredQty', label: 'Decl Qty', width: 'min-w-[50px]', type: 'number' },
+  { key: 'declaredUOM', label: 'Decl UOM', width: 'min-w-[40px]' },
+  { key: 'packQtyToBeReleased', label: 'Pack Qty to be Released', width: 'min-w-[60px]', type: 'number' },
+  { key: 'packUOMToBeReleased', label: 'Pack UOM to be Released', width: 'min-w-[40px]' },
+  { key: 'itemAmount', label: 'Amount', width: 'min-w-[60px]', type: 'number', step: '0.01' },
+  { key: 'itemDescription', label: 'Desc 1', width: 'min-w-[40px]' },
+  { key: 'itemDescription2', label: 'Desc 2', width: 'min-w-[40px]' },
+  { key: 'itemDescription3', label: 'Description 3', width: 'min-w-[120px]' },
+];
+
 // Form configuration mapping
 export const FORM_CONFIGURATIONS = {
   'K1': {
@@ -38,6 +53,11 @@ export const FORM_CONFIGURATIONS = {
     name: 'K2 Form',
     columns: K2_FORM_COLUMNS,
     description: 'Simplified customs form with essential fields'
+  },
+  'K9': {
+    name: 'K9 Form',
+    columns: K9_FORM_COLUMNS,
+    description: 'Advanced customs form with pack quantity fields'
   }
 } as const;
 
