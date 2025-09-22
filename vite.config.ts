@@ -22,7 +22,7 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'https://j3plvsxcxj7sn5afr3yfwinece0dgtxi.lambda-url.ap-southeast-1.on.aws',
+        target: 'https://hk3gfh3zy5.execute-api.ap-southeast-5.amazonaws.com/main',
         changeOrigin: true,
         secure: true,
         configure: (proxy, _options) => {
