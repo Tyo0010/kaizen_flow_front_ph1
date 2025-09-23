@@ -439,7 +439,9 @@ export const uploadToS3 = async (file: File, uploadUrl: string, contentType: str
         method: 'PUT',
         headers: {
             'Content-Type': contentType,
-            'Content-Length': file.size.toString()
+            'Content-Length': file.size.toString(),
+            'x-amz-server-side-encryption': 'aws:kms',
+            'x-amz-server-side-encryption-aws-kms-key-id': 'arn:aws:kms:ap-southeast-5:852902712220:key/09e3d7ef-dedf-469c-bb36-fc0629e3e5f9',
         },
         body: file
     })
