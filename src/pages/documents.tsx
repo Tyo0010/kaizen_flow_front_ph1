@@ -1988,21 +1988,19 @@ function DocumentsPage() {
                                               if (hasFailed) {
                                                 // You could add a retry mechanism here
                                                 setMessage("Some documents failed to process. Please check individual document status or try re-uploading the failed files.");
-                                              } else if (hasCancelled) {
-                                                // Handle retry for cancelled documents
-                                                handlePreview(groupDocuments);
-                                              } else {
+                                              } else if (!hasCancelled) {
+                                                // Only allow action if not cancelled
                                                 handlePreview(groupDocuments);
                                               }
                                             }}
                                             disabled={
-                                              isLoading || (!allProcessed && !hasFailed && !hasCancelled)
+                                              isLoading || hasCancelled || (!allProcessed && !hasFailed)
                                             }
                                             className={`inline-flex items-center disabled:opacity-50 ${
                                               hasFailed
                                                 ? "bg-red-600 hover:bg-red-700"
                                                 : hasCancelled
-                                                ? "bg-orange-600 hover:bg-orange-700"
+                                                ? "bg-gray-400 cursor-not-allowed"
                                                 : allProcessed
                                                 ? "bg-blue-600 hover:bg-blue-700"
                                                 : "bg-gray-400 cursor-not-allowed"
@@ -2011,7 +2009,7 @@ function DocumentsPage() {
                                               hasFailed
                                                 ? "Some documents failed to process"
                                                 : hasCancelled
-                                                ? "Processing was cancelled - click to retry"
+                                                ? "Processing was cancelled - button disabled"
                                                 : allProcessed
                                                 ? "Generate Excel files for preview"
                                                 : "Please wait for all documents to finish processing"
