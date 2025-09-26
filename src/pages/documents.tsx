@@ -726,7 +726,9 @@ function DocumentsPage() {
 
       return [];
     });
-    return allFiles;
+    return allFiles.filter((file) =>
+      typeof file.filename === "string" && /\.(xlsx|xls)$/i.test(file.filename)
+    );
   };
 
   // Helper function to check if all documents in a group are processed
@@ -742,6 +744,48 @@ function DocumentsPage() {
 
   const hasFailedDocuments = (groupDocuments: Document[]) => {
     return groupDocuments.some((doc) => doc.processing_status === "failed");
+  };
+
+  const clickHiddenLink = (url: string, filename?: string) => {
+    const link = document.createElement("a");
+    link.href = url;
+    if (filename) {
+      link.download = filename;
+    }
+    link.target = "_blank";
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const downloadFileWithFallback = async (url: string, filename?: string) => {
+    try {
+      const response = await fetch(url, { mode: "cors" });
+
+      if (!response.ok) {
+        const statusError: any = new Error(
+          `Download failed with status ${response.status}`
+        );
+        statusError.status = response.status;
+        throw statusError;
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      clickHiddenLink(objectUrl, filename || "download");
+      URL.revokeObjectURL(objectUrl);
+    } catch (downloadError: any) {
+      if (downloadError?.status) {
+        throw downloadError;
+      }
+
+      console.warn(
+        "Presigned download via fetch failed, falling back to direct link",
+        downloadError
+      );
+      clickHiddenLink(url, filename);
+    }
   };
 
   const downloadDocument = async (documentId: string, documentName: string) => {
@@ -761,22 +805,7 @@ function DocumentsPage() {
         throw new Error("Download link unavailable");
       }
 
-      const fileResponse = await fetch(data.download_url);
-
-      if (!fileResponse.ok) {
-        throw new Error(`Download failed with status ${fileResponse.status}`);
-      }
-
-      const blob = await fileResponse.blob();
-      const objectUrl = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = documentName || "document";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(objectUrl);
+      await downloadFileWithFallback(data.download_url, documentName || "document");
 
       setMessage("Download started successfully!");
 
@@ -798,22 +827,7 @@ function DocumentsPage() {
         throw new Error("Download URL is missing");
       }
 
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`Download failed with status ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = filename || "processed-file";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(objectUrl);
+      await downloadFileWithFallback(url, filename || "processed-file");
 
       setMessage("Download started successfully!");
 
