@@ -530,7 +530,7 @@ function DocumentsPage() {
     try {
       const params: any = {
         page: currentPage,
-        per_page: 20 // Standard page size
+        per_page: 20, // Standard page size
       };
 
       if (statusFilter) params.status = statusFilter;
@@ -543,7 +543,7 @@ function DocumentsPage() {
         params.group_by_session = true;
         params.status = "completed";
       }
-      
+
       // Always include processed files so they're available in both tabs
       params.include_processed_files = true;
 
@@ -563,7 +563,7 @@ function DocumentsPage() {
             name: doc.document_name,
             status: doc.processing_status,
             processed_files: doc.processed_files?.length || 0,
-            processed_files_details: doc.processed_files
+            processed_files_details: doc.processed_files,
           });
         });
       }
@@ -726,8 +726,10 @@ function DocumentsPage() {
 
       return [];
     });
-    return allFiles.filter((file) =>
-      typeof file.filename === "string" && /\.(xlsx|xls)$/i.test(file.filename)
+    return allFiles.filter(
+      (file) =>
+        typeof file.filename === "string" &&
+        /\.(xlsx|xls)$/i.test(file.filename)
     );
   };
 
@@ -809,7 +811,10 @@ function DocumentsPage() {
         throw new Error("Download link unavailable");
       }
 
-      await downloadFileWithFallback(data.download_url, documentName || "document");
+      await downloadFileWithFallback(
+        data.download_url,
+        documentName || "document"
+      );
 
       setMessage("Download started successfully!");
 
@@ -841,7 +846,6 @@ function DocumentsPage() {
       setMessage(`Failed to download file: ${error.message}`);
     }
   };
-
 
   const deleteDocument = async (documentId: string) => {
     try {
@@ -997,7 +1001,7 @@ function DocumentsPage() {
               </div>
             ) : (
               <>
-                {totalDocuments} total documents 
+                {totalDocuments} total documents
                 {totalPages > 1 && (
                   <span className="ml-2 text-gray-400">
                     (Page {currentPage} of {totalPages})
@@ -1005,22 +1009,20 @@ function DocumentsPage() {
                 )}
               </>
             )
+          ) : loading ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+              Loading processed documents...
+            </div>
           ) : (
-            loading ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                Loading processed documents...
-              </div>
-            ) : (
-              <>
-                {totalDocuments} total processed documents
-                {totalPages > 1 && (
-                  <span className="ml-2 text-gray-400">
-                    (Page {currentPage} of {totalPages})
-                  </span>
-                )}
-              </>
-            )
+            <>
+              {totalDocuments} total processed documents
+              {totalPages > 1 && (
+                <span className="ml-2 text-gray-400">
+                  (Page {currentPage} of {totalPages})
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -1241,7 +1243,8 @@ function DocumentsPage() {
                       onValueChange={(value) => {
                         setStatusFilter(value === "all" ? "" : value);
                         setCurrentPage(1); // Reset to first page when filtering
-                      }}>
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="All Statuses" />
                       </SelectTrigger>
@@ -1267,7 +1270,8 @@ function DocumentsPage() {
                     onValueChange={(value) => {
                       setFormatFilter(value === "all" ? "" : value);
                       setCurrentPage(1); // Reset to first page when filtering
-                    }}>
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="All Formats" />
                     </SelectTrigger>
@@ -1296,7 +1300,8 @@ function DocumentsPage() {
                     onValueChange={(value) => {
                       setSessionFilter(value === "all" ? "" : value);
                       setCurrentPage(1); // Reset to first page when filtering
-                    }}>
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="All Sessions" />
                     </SelectTrigger>
@@ -1330,7 +1335,6 @@ function DocumentsPage() {
                   Show session aggregation data
                 </Label>
               </div>
-              
 
               {/* Clear Filters Button */}
               {(statusFilter || formatFilter || sessionFilter) && (
@@ -1352,7 +1356,7 @@ function DocumentsPage() {
               )}
 
               {/* Quick Page Navigation for current tab */}
-              {((activeTab === "uploaded" && totalPages > 1) || 
+              {((activeTab === "uploaded" && totalPages > 1) ||
                 (activeTab === "processed" && totalPages > 1)) && (
                 <div className="pt-4 border-t border-gray-200 mt-4">
                   <div className="flex items-center justify-between">
@@ -1365,7 +1369,9 @@ function DocumentsPage() {
                         size="sm"
                         onClick={() => handlePageChange(1)}
                         disabled={
-                          activeTab === "uploaded" ? currentPage === 1 : currentPage === 1
+                          activeTab === "uploaded"
+                            ? currentPage === 1
+                            : currentPage === 1
                         }
                       >
                         First
@@ -1374,22 +1380,22 @@ function DocumentsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const lastPage = activeTab === "uploaded" ? totalPages : totalPages;
+                          const lastPage =
+                            activeTab === "uploaded" ? totalPages : totalPages;
                           handlePageChange(lastPage);
                         }}
                         disabled={
-                          activeTab === "uploaded" 
-                            ? currentPage === totalPages 
+                          activeTab === "uploaded"
+                            ? currentPage === totalPages
                             : currentPage === totalPages
                         }
                       >
                         Last
                       </Button>
                       <span className="text-sm text-gray-500 ml-2">
-                        {activeTab === "uploaded" 
+                        {activeTab === "uploaded"
                           ? `${currentPage}/${totalPages}`
-                          : `${currentPage}/${totalPages}`
-                        }
+                          : `${currentPage}/${totalPages}`}
                       </span>
                     </div>
                   </div>
@@ -1472,8 +1478,7 @@ function DocumentsPage() {
             <CardContent className="p-8 text-center">
               <div className="text-lg text-gray-500">Loading documents...</div>
             </CardContent>
-          ) : documents
-              .length === 0 ? (
+          ) : documents.length === 0 ? (
             <CardContent className="p-8 text-center">
               <div className="text-lg text-gray-500 mb-2">
                 No documents found
@@ -1736,7 +1741,10 @@ function DocumentsPage() {
 
                               // Show processed files if any exist (limit to first 2)
                               if (allProcessedFiles.length > 0) {
-                                const displayedFiles = allProcessedFiles.slice(0, 2);
+                                const displayedFiles = allProcessedFiles.slice(
+                                  0,
+                                  2
+                                );
                                 return displayedFiles.map(
                                   (processedFile, index) => (
                                     <tr
@@ -1773,11 +1781,18 @@ function DocumentsPage() {
                                               {allProcessedFiles.length > 1 && (
                                                 <span>
                                                   {" "}
-                                                  • {allProcessedFiles.length}{" "}
+                                                  • {
+                                                    allProcessedFiles.length
+                                                  }{" "}
                                                   processed files available
-                                                  {allProcessedFiles.length > 2 && index === 1 && (
-                                                    <span> (showing first 2)</span>
-                                                  )}
+                                                  {allProcessedFiles.length >
+                                                    2 &&
+                                                    index === 1 && (
+                                                      <span>
+                                                        {" "}
+                                                        (showing first 2)
+                                                      </span>
+                                                    )}
                                                 </span>
                                               )}
                                             </div>
@@ -1848,15 +1863,17 @@ function DocumentsPage() {
                                     previewLoading.has(sessionId);
                                   const allProcessed =
                                     areAllDocumentsProcessed(groupDocuments);
-                                  const hasFailed = hasFailedDocuments(groupDocuments);
-                                  const hasCancelled = hasCancelledDocuments(groupDocuments);
+                                  const hasFailed =
+                                    hasFailedDocuments(groupDocuments);
+                                  const hasCancelled =
+                                    hasCancelledDocuments(groupDocuments);
 
                                   return (
                                     <tr
                                       key={`group-preview-${sessionId}`}
                                       className={`hover:bg-blue-50 transition-colors border-l-4 ${
-                                        hasFailed 
-                                          ? "bg-red-25 border-red-500" 
+                                        hasFailed
+                                          ? "bg-red-25 border-red-500"
                                           : hasCancelled
                                           ? "bg-orange-25 border-orange-500"
                                           : "bg-blue-25 border-blue-500"
@@ -1864,17 +1881,19 @@ function DocumentsPage() {
                                     >
                                       <td className="p-4 pl-8">
                                         <div className="flex items-center gap-3">
-                                          <div className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br rounded-lg flex items-center justify-center ${
-                                            hasFailed 
-                                              ? "from-red-100 to-red-200" 
-                                              : hasCancelled
-                                              ? "from-orange-100 to-orange-200"
-                                              : "from-blue-100 to-blue-200"
-                                          }`}>
+                                          <div
+                                            className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br rounded-lg flex items-center justify-center ${
+                                              hasFailed
+                                                ? "from-red-100 to-red-200"
+                                                : hasCancelled
+                                                ? "from-orange-100 to-orange-200"
+                                                : "from-blue-100 to-blue-200"
+                                            }`}
+                                          >
                                             <svg
                                               className={`w-4 h-4 ${
-                                                hasFailed 
-                                                  ? "text-red-600" 
+                                                hasFailed
+                                                  ? "text-red-600"
                                                   : hasCancelled
                                                   ? "text-orange-600"
                                                   : "text-blue-600"
@@ -1904,30 +1923,34 @@ function DocumentsPage() {
                                             </svg>
                                           </div>
                                           <div>
-                                            <div className={`font-medium truncate max-w-[400px] mb-1 ${
-                                              hasFailed 
-                                                ? "text-red-900" 
-                                                : hasCancelled
-                                                ? "text-orange-900"
-                                                : "text-blue-900"
-                                            }`}>
-                                              {hasFailed 
-                                                ? "Processing Failed" 
+                                            <div
+                                              className={`font-medium truncate max-w-[400px] mb-1 ${
+                                                hasFailed
+                                                  ? "text-red-900"
+                                                  : hasCancelled
+                                                  ? "text-orange-900"
+                                                  : "text-blue-900"
+                                              }`}
+                                            >
+                                              {hasFailed
+                                                ? "Processing Failed"
                                                 : hasCancelled
                                                 ? "Processing Cancelled"
                                                 : "Generate Excel Files"}
                                             </div>
-                                            <div className={`text-xs ${
-                                              hasFailed 
-                                                ? "text-red-600" 
-                                                : hasCancelled
-                                                ? "text-orange-600"
-                                                : "text-blue-600"
-                                            }`}>
+                                            <div
+                                              className={`text-xs ${
+                                                hasFailed
+                                                  ? "text-red-600"
+                                                  : hasCancelled
+                                                  ? "text-orange-600"
+                                                  : "text-blue-600"
+                                              }`}
+                                            >
                                               {hasFailed
                                                 ? "Some documents failed to process • Check individual document status"
                                                 : hasCancelled
-                                                ? "Processing was cancelled • You can retry by clicking Preview"
+                                                ? "Processing was cancelled by user request"
                                                 : allProcessed
                                                 ? "No processed files found • Click Preview to generate Excel files"
                                                 : "Processing in progress • Please wait for completion"}
@@ -1987,14 +2010,18 @@ function DocumentsPage() {
                                               e.stopPropagation();
                                               if (hasFailed) {
                                                 // You could add a retry mechanism here
-                                                setMessage("Some documents failed to process. Please check individual document status or try re-uploading the failed files.");
+                                                setMessage(
+                                                  "Some documents failed to process. Please check individual document status or try re-uploading the failed files."
+                                                );
                                               } else if (!hasCancelled) {
                                                 // Only allow action if not cancelled
                                                 handlePreview(groupDocuments);
                                               }
                                             }}
                                             disabled={
-                                              isLoading || hasCancelled || (!allProcessed && !hasFailed)
+                                              isLoading ||
+                                              hasCancelled ||
+                                              (!allProcessed && !hasFailed)
                                             }
                                             className={`inline-flex items-center disabled:opacity-50 ${
                                               hasFailed
@@ -2108,16 +2135,19 @@ function DocumentsPage() {
                 {(() => {
                   // Collect all unique processed files from all documents
                   const allProcessedFiles = new Map();
-                  
+
                   documents.forEach((document) => {
-                    if (document.processed_files && document.processed_files.length > 0) {
+                    if (
+                      document.processed_files &&
+                      document.processed_files.length > 0
+                    ) {
                       document.processed_files.forEach((processedFile) => {
                         // Use filename + size as the unique key to avoid duplicates
                         const uniqueKey = `${processedFile.filename}-${processedFile.size}`;
                         if (!allProcessedFiles.has(uniqueKey)) {
                           allProcessedFiles.set(uniqueKey, {
                             ...processedFile,
-                            sourceDocument: document
+                            sourceDocument: document,
                           });
                         }
                       });
@@ -2125,8 +2155,10 @@ function DocumentsPage() {
                   });
 
                   // Convert map to array and render
-                  const uniqueProcessedFiles = Array.from(allProcessedFiles.values());
-                  
+                  const uniqueProcessedFiles = Array.from(
+                    allProcessedFiles.values()
+                  );
+
                   if (uniqueProcessedFiles.length > 0) {
                     return uniqueProcessedFiles.map((processedFile, index) => (
                       <TableRow
@@ -2153,8 +2185,14 @@ function DocumentsPage() {
                                 {processedFile.filename}
                               </div>
                               <div className="text-xs text-gray-500">
-                                From: {processedFile.sourceDocument.original_filename} • ID:{" "}
-                                {processedFile.sourceDocument.document_id.slice(0, 8)}...
+                                From:{" "}
+                                {processedFile.sourceDocument.original_filename}{" "}
+                                • ID:{" "}
+                                {processedFile.sourceDocument.document_id.slice(
+                                  0,
+                                  8
+                                )}
+                                ...
                               </div>
                             </div>
                           </div>
@@ -2247,9 +2285,11 @@ function DocumentsPage() {
                   } else {
                     // Fallback - show documents that don't have processed_files
                     const documentsWithoutProcessedFiles = documents.filter(
-                      document => !document.processed_files || document.processed_files.length === 0
+                      (document) =>
+                        !document.processed_files ||
+                        document.processed_files.length === 0
                     );
-                    
+
                     return documentsWithoutProcessedFiles.map((document) => (
                       <TableRow
                         key={document.document_id}
@@ -2371,7 +2411,10 @@ function DocumentsPage() {
                 })()}
                 {documents.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                    <TableCell
+                      colSpan={5}
+                      className="text-center py-8 text-gray-500"
+                    >
                       No processed documents found.
                     </TableCell>
                   </TableRow>
@@ -2382,17 +2425,23 @@ function DocumentsPage() {
 
           {/* Pagination - show for both tabs */}
           {!loading &&
-            ((activeTab === "uploaded" && documents.length > 0 && totalPages > 1) ||
-              (activeTab === "processed" && documents.length > 0 && totalPages > 1)) && (
+            ((activeTab === "uploaded" &&
+              documents.length > 0 &&
+              totalPages > 1) ||
+              (activeTab === "processed" &&
+                documents.length > 0 &&
+                totalPages > 1)) && (
               <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                 <div className="text-sm text-gray-500">
                   {activeTab === "uploaded" ? (
                     <>
-                      Showing page {currentPage} of {totalPages} ({totalDocuments} total documents)
+                      Showing page {currentPage} of {totalPages} (
+                      {totalDocuments} total documents)
                     </>
                   ) : (
                     <>
-                      Showing page {currentPage} of {totalPages} ({totalDocuments} total documents)
+                      Showing page {currentPage} of {totalPages} (
+                      {totalDocuments} total documents)
                     </>
                   )}
                 </div>
@@ -2407,20 +2456,15 @@ function DocumentsPage() {
                         handlePageChange(currentPage - 1);
                       }
                     }}
-                    disabled={
-                      currentPage <= 1
-                    }
+                    disabled={currentPage <= 1}
                   >
                     Previous
                   </Button>
-                  
+
                   {/* Page numbers */}
                   {Array.from(
-                    { 
-                      length: Math.min(
-                        5, 
-                        totalPages
-                      ) 
+                    {
+                      length: Math.min(5, totalPages),
                     },
                     (_, i) => {
                       const currentPageNum = currentPage;
@@ -2444,7 +2488,7 @@ function DocumentsPage() {
                       );
                     }
                   )}
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -2455,13 +2499,11 @@ function DocumentsPage() {
                         handlePageChange(currentPage + 1);
                       }
                     }}
-                    disabled={
-                      currentPage >= totalPages
-                    }
+                    disabled={currentPage >= totalPages}
                   >
                     Next
                   </Button>
-                  
+
                   {/* Jump to page input */}
                   <div className="flex items-center gap-2 ml-4">
                     <span className="text-sm text-gray-500">Go to:</span>
@@ -2474,12 +2516,12 @@ function DocumentsPage() {
                       className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       onChange={(e) => setJumpToPageValue(e.target.value)}
                       onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === "Enter") {
                           const pageNum = parseInt(jumpToPageValue);
                           const maxPage = totalPages;
                           if (pageNum >= 1 && pageNum <= maxPage) {
                             handlePageChange(pageNum);
-                            setJumpToPageValue('');
+                            setJumpToPageValue("");
                           }
                         }
                       }}
@@ -2492,10 +2534,14 @@ function DocumentsPage() {
                         const maxPage = totalPages;
                         if (pageNum >= 1 && pageNum <= maxPage) {
                           handlePageChange(pageNum);
-                          setJumpToPageValue('');
+                          setJumpToPageValue("");
                         }
                       }}
-                      disabled={!jumpToPageValue || parseInt(jumpToPageValue) < 1 || parseInt(jumpToPageValue) > totalPages}
+                      disabled={
+                        !jumpToPageValue ||
+                        parseInt(jumpToPageValue) < 1 ||
+                        parseInt(jumpToPageValue) > totalPages
+                      }
                       className="px-3"
                     >
                       Go
