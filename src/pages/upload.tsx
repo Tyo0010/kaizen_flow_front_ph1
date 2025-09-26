@@ -1202,7 +1202,9 @@ function MainPage() {
       let errorMessage = `Upload failed: ${error.message}`;
 
       if (error.message?.includes("Monthly page limit exceeded")) {
-        errorMessage = `Upload blocked: ${error.message}`;
+        errorMessage = `Monthly page limit already exceeded`;
+      } else if (error.message?.includes("Usage limit exceeded")) {
+        errorMessage = `Monthly page limit already exceeded`;
       } else if (error.message?.includes("S3 upload failed")) {
         errorMessage = `Cloud storage upload failed: ${error.message}`;
       } else if (error.message?.includes("File not found in S3")) {
@@ -1226,7 +1228,9 @@ function MainPage() {
       {message && (
         <Alert
           variant={
-            message.includes("Error") || message.includes("Failed")
+            message.includes("Error") || 
+            message.includes("Failed") || 
+            message.includes("Monthly page limit already exceeded")
               ? "destructive"
               : "default"
           }
