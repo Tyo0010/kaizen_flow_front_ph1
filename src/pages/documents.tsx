@@ -746,6 +746,10 @@ function DocumentsPage() {
     return groupDocuments.some((doc) => doc.processing_status === "failed");
   };
 
+  const hasCancelledDocuments = (groupDocuments: Document[]) => {
+    return groupDocuments.some((doc) => doc.processing_status === "cancelled");
+  };
+
   const clickHiddenLink = (url: string, filename?: string) => {
     const link = document.createElement("a");
     link.href = url;
@@ -1845,6 +1849,7 @@ function DocumentsPage() {
                                   const allProcessed =
                                     areAllDocumentsProcessed(groupDocuments);
                                   const hasFailed = hasFailedDocuments(groupDocuments);
+                                  const hasCancelled = hasCancelledDocuments(groupDocuments);
 
                                   return (
                                     <tr
@@ -1852,6 +1857,8 @@ function DocumentsPage() {
                                       className={`hover:bg-blue-50 transition-colors border-l-4 ${
                                         hasFailed 
                                           ? "bg-red-25 border-red-500" 
+                                          : hasCancelled
+                                          ? "bg-orange-25 border-orange-500"
                                           : "bg-blue-25 border-blue-500"
                                       }`}
                                     >
@@ -1860,11 +1867,17 @@ function DocumentsPage() {
                                           <div className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br rounded-lg flex items-center justify-center ${
                                             hasFailed 
                                               ? "from-red-100 to-red-200" 
+                                              : hasCancelled
+                                              ? "from-orange-100 to-orange-200"
                                               : "from-blue-100 to-blue-200"
                                           }`}>
                                             <svg
                                               className={`w-4 h-4 ${
-                                                hasFailed ? "text-red-600" : "text-blue-600"
+                                                hasFailed 
+                                                  ? "text-red-600" 
+                                                  : hasCancelled
+                                                  ? "text-orange-600"
+                                                  : "text-blue-600"
                                               }`}
                                               fill="currentColor"
                                               viewBox="0 0 20 20"
@@ -1873,6 +1886,12 @@ function DocumentsPage() {
                                                 <path
                                                   fillRule="evenodd"
                                                   d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                                  clipRule="evenodd"
+                                                />
+                                              ) : hasCancelled ? (
+                                                <path
+                                                  fillRule="evenodd"
+                                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                                                   clipRule="evenodd"
                                                 />
                                               ) : (
@@ -1886,15 +1905,29 @@ function DocumentsPage() {
                                           </div>
                                           <div>
                                             <div className={`font-medium truncate max-w-[400px] mb-1 ${
-                                              hasFailed ? "text-red-900" : "text-blue-900"
+                                              hasFailed 
+                                                ? "text-red-900" 
+                                                : hasCancelled
+                                                ? "text-orange-900"
+                                                : "text-blue-900"
                                             }`}>
-                                              {hasFailed ? "Processing Failed" : "Generate Excel Files"}
+                                              {hasFailed 
+                                                ? "Processing Failed" 
+                                                : hasCancelled
+                                                ? "Processing Cancelled"
+                                                : "Generate Excel Files"}
                                             </div>
                                             <div className={`text-xs ${
-                                              hasFailed ? "text-red-600" : "text-blue-600"
+                                              hasFailed 
+                                                ? "text-red-600" 
+                                                : hasCancelled
+                                                ? "text-orange-600"
+                                                : "text-blue-600"
                                             }`}>
                                               {hasFailed
                                                 ? "Some documents failed to process • Check individual document status"
+                                                : hasCancelled
+                                                ? "Processing was cancelled • You can retry by clicking Preview"
                                                 : allProcessed
                                                 ? "No processed files found • Click Preview to generate Excel files"
                                                 : "Processing in progress • Please wait for completion"}
@@ -1907,6 +1940,8 @@ function DocumentsPage() {
                                           variant={
                                             hasFailed
                                               ? "destructive"
+                                              : hasCancelled
+                                              ? "secondary"
                                               : allProcessed
                                               ? "secondary"
                                               : "outline"
@@ -1914,6 +1949,8 @@ function DocumentsPage() {
                                           className={
                                             hasFailed
                                               ? "bg-red-100 text-red-800 border-red-200"
+                                              : hasCancelled
+                                              ? "bg-orange-100 text-orange-800 border-orange-200"
                                               : allProcessed
                                               ? "bg-blue-100 text-blue-800 border-blue-200"
                                               : "bg-yellow-100 text-yellow-800 border-yellow-200"
@@ -1921,6 +1958,8 @@ function DocumentsPage() {
                                         >
                                           {hasFailed
                                             ? "Failed"
+                                            : hasCancelled
+                                            ? "Cancelled"
                                             : allProcessed
                                             ? "Ready to Process"
                                             : "Processing"}
@@ -1949,16 +1988,21 @@ function DocumentsPage() {
                                               if (hasFailed) {
                                                 // You could add a retry mechanism here
                                                 setMessage("Some documents failed to process. Please check individual document status or try re-uploading the failed files.");
+                                              } else if (hasCancelled) {
+                                                // Handle retry for cancelled documents
+                                                handlePreview(groupDocuments);
                                               } else {
                                                 handlePreview(groupDocuments);
                                               }
                                             }}
                                             disabled={
-                                              isLoading || (!allProcessed && !hasFailed)
+                                              isLoading || (!allProcessed && !hasFailed && !hasCancelled)
                                             }
                                             className={`inline-flex items-center disabled:opacity-50 ${
                                               hasFailed
                                                 ? "bg-red-600 hover:bg-red-700"
+                                                : hasCancelled
+                                                ? "bg-orange-600 hover:bg-orange-700"
                                                 : allProcessed
                                                 ? "bg-blue-600 hover:bg-blue-700"
                                                 : "bg-gray-400 cursor-not-allowed"
@@ -1966,6 +2010,8 @@ function DocumentsPage() {
                                             title={
                                               hasFailed
                                                 ? "Some documents failed to process"
+                                                : hasCancelled
+                                                ? "Processing was cancelled - click to retry"
                                                 : allProcessed
                                                 ? "Generate Excel files for preview"
                                                 : "Please wait for all documents to finish processing"
@@ -1985,6 +2031,20 @@ function DocumentsPage() {
                                                   strokeLinejoin="round"
                                                   strokeWidth={2}
                                                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+                                                />
+                                              </svg>
+                                            ) : hasCancelled ? (
+                                              <svg
+                                                className="w-4 h-4 mr-1"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                                                 />
                                               </svg>
                                             ) : (
@@ -2012,6 +2072,8 @@ function DocumentsPage() {
                                               ? "Opening..."
                                               : hasFailed
                                               ? "Failed"
+                                              : hasCancelled
+                                              ? "Cancelled"
                                               : allProcessed
                                               ? "Preview"
                                               : "Processing..."}
