@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import {
-  getCompanyUsers,
   addUserToCompany,
   updateCompanyUser,
   deleteCompanyUser,
-  getAssignableRoles,
+  getAuthHeaders,
+  handleApiResponse,
+  API_BASE_URL,
 } from "../utils/api";
 
 interface Role {
@@ -83,17 +84,28 @@ function AdminUserManagement() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load company users and assignable roles in parallel
-      const [usersData, rolesData] = await Promise.all([
-        getCompanyUsers({
-          page: 1,
-          per_page: 100, // Get all users for now
-        }),
-        getAssignableRoles(),
-      ]);
+      // Load company users using admin endpoint
+      const response = await fetch(
+        `${API_BASE_URL}/admin/users?page=1&per_page=100`,
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+
+      const usersData = await handleApiResponse(response);
 
       setUsers(usersData.users || []);
-      setRoles(rolesData.roles || []);
+
+      // Extract unique roles from user data
+      const uniqueRoles = new Map<string, Role>();
+
+      usersData.users?.forEach((user: User) => {
+        if (user.role) {
+          uniqueRoles.set(user.role.role_id, user.role);
+        }
+      });
+
+      setRoles(Array.from(uniqueRoles.values()));
     } catch (error: any) {
       console.error("Error loading data:", error);
       setMessage(`Error loading data: ${error.message}`);
