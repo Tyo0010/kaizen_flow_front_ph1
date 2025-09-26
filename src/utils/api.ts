@@ -2,6 +2,15 @@
 export const API_BASE_URL = 'https://hk3gfh3zy5.execute-api.ap-southeast-5.amazonaws.com/main/api'
 
 // ========================================
+// RETRY LOGIC CONFIGURATION
+// ========================================
+// Most API functions now include automatic retry logic:
+// - If the first request fails with a retryable error, it will be retried once after 1 second
+// - Retryable errors include: 5xx server errors, 408 timeout, 429 rate limiting, network errors
+// - Non-retryable errors include: 401/403/404 client errors (immediate failure)
+// - This improves reliability for temporary network issues and server hiccups
+
+// ========================================
 // SESSION ISSUES API INTERFACES
 // ========================================
 
@@ -91,32 +100,96 @@ export const handleApiResponse = async (response: Response) => {
     return response.json()
 }
 
+// Helper function to determine if an error is retryable
+const isRetryableError = (error: any, response?: Response): boolean => {
+    // Don't retry on authentication errors (401) or client errors (4xx except 408, 429)
+    if (response) {
+        const status = response.status
+        if (status === 401 || status === 403 || status === 404) {
+            return false
+        }
+        // Retry on server errors (5xx), timeout (408), and rate limiting (429)
+        if (status >= 500 || status === 408 || status === 429) {
+            return true
+        }
+    }
+    
+    // Retry on network errors
+    if (error?.message?.includes('NetworkError') || 
+        error?.message?.includes('fetch') ||
+        error?.message?.includes('timeout') ||
+        error?.code === 'NETWORK_ERROR') {
+        return true
+    }
+    
+    return false
+}
+
+// Helper function to add retry logic to API calls
+const withRetry = async <T>(
+    apiCall: () => Promise<T>, 
+    maxRetries: number = 1,
+    delayMs: number = 1000
+): Promise<T> => {
+    let lastError: any
+    let lastResponse: Response | undefined
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await apiCall()
+        } catch (error: any) {
+            lastError = error
+            
+            // Extract response if it's a fetch error with response info
+            if (error?.response) {
+                lastResponse = error.response
+            }
+            
+            // If this is not the last attempt and the error is retryable, wait and retry
+            if (attempt < maxRetries && isRetryableError(error, lastResponse)) {
+                console.log(`API call failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms...`, error.message)
+                await new Promise(resolve => setTimeout(resolve, delayMs))
+                continue
+            }
+            
+            // If we've exhausted retries or error is not retryable, throw the error
+            break
+        }
+    }
+    
+    throw lastError
+}
+
 // Check if uploading pages would exceed monthly limit
 export const checkUsageLimit = async (pages: number) => {
-    console.log('Calling checkUsageLimit with pages:', pages)
-    console.log('API URL:', `${API_BASE_URL}/documents/usage/check`)
-    
-    const response = await fetch(`${API_BASE_URL}/documents/usage/check`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ pages })
+    return withRetry(async () => {
+        console.log('Calling checkUsageLimit with pages:', pages)
+        console.log('API URL:', `${API_BASE_URL}/documents/usage/check`)
+        
+        const response = await fetch(`${API_BASE_URL}/documents/usage/check`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ pages })
+        })
+        
+        console.log('Usage check response status:', response.status)
+        const result = await handleApiResponse(response)
+        console.log('Usage check result:', result)
+        
+        return result
     })
-    
-    console.log('Usage check response status:', response.status)
-    const result = await handleApiResponse(response)
-    console.log('Usage check result:', result)
-    
-    return result
 }
 
 // Get current company's usage stats and subscription limits
 export const getUsageStats = async () => {
-    const response = await fetch(`${API_BASE_URL}/documents/usage`, {
-        method: 'GET',
-        headers: getAuthHeaders()
+    return withRetry(async () => {
+        const response = await fetch(`${API_BASE_URL}/documents/usage`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Upload files and return session ID
@@ -194,103 +267,119 @@ export const uploadFiles = async (files: File[], outputFormat: string, documentN
 
 // Get session status for file processing
 export const getSessionStatus = async (sessionId: string) => {
-    const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/status`, {
-        headers: getAuthHeaders()
+    return withRetry(async () => {
+        const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/status`, {
+            headers: getAuthHeaders()
+        })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Get session issues for verification problems
 export const getSessionIssues = async (sessionId: string): Promise<SessionIssuesResponse> => {
-    const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/issues`, {
-        headers: getAuthHeaders()
+    return withRetry(async () => {
+        const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/issues`, {
+            headers: getAuthHeaders()
+        })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Get processed data for preview using session_id
 export const getSessionProcessedData = async (sessionId: string) => {
-    console.log('getSessionProcessedData called with sessionId:', sessionId)
-    
-    // Fetch processed output directly using session_id
-    console.log(`Fetching processed output for session: ${sessionId}`)
-    const response = await fetch(`${API_BASE_URL}/documents/${sessionId}/processed-output`, {
-        headers: getAuthHeaders()
+    return withRetry(async () => {
+        console.log('getSessionProcessedData called with sessionId:', sessionId)
+        
+        // Fetch processed output directly using session_id
+        console.log(`Fetching processed output for session: ${sessionId}`)
+        const response = await fetch(`${API_BASE_URL}/documents/${sessionId}/processed-output`, {
+            headers: getAuthHeaders()
+        })
+        
+        console.log(`Processed output response status for ${sessionId}:`, response.status)
+        const data = await handleApiResponse(response)
+        console.log(`Processed output data for ${sessionId}:`, data)
+        
+        const result = data.processed_output || data
+        console.log('Final processed data result:', result)
+        return result
     })
-    
-    console.log(`Processed output response status for ${sessionId}:`, response.status)
-    const data = await handleApiResponse(response)
-    console.log(`Processed output data for ${sessionId}:`, data)
-    
-    const result = data.processed_output || data
-    console.log('Final processed data result:', result)
-    return result
 }
 
 // Update processed data using session_id 
 export const updateProcessedData = async (sessionId: string, processedData: any) => {
-    // If processedData is an array, take the first item
-    const dataToSend = Array.isArray(processedData) ? processedData[0] : processedData
-    
-    const response = await fetch(`${API_BASE_URL}/documents/${sessionId}/processed-output`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-            processed_output: dataToSend
+    return withRetry(async () => {
+        // If processedData is an array, take the first item
+        const dataToSend = Array.isArray(processedData) ? processedData[0] : processedData
+        
+        const response = await fetch(`${API_BASE_URL}/documents/${sessionId}/processed-output`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                processed_output: dataToSend
+            })
         })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Generate Excel files using session_id
 export const generateExcelFiles = async (sessionId: string, processedData: any) => {
-    const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/generate-excels`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-            processed_output: processedData
+    return withRetry(async () => {
+        const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/generate-excels`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                processed_output: processedData
+            })
         })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Get session processed files
 export const getSessionProcessedFiles = async (sessionId: string) => {
-    const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/processed`, {
-        headers: getAuthHeaders()
+    return withRetry(async () => {
+        const response = await fetch(`${API_BASE_URL}/documents/session/${sessionId}/processed`, {
+            headers: getAuthHeaders()
+        })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Process documents with format validation bypass
 export const processWithBypass = async (sessionId: string) => {
-    const response = await fetch(`${API_BASE_URL}/documents/process-with-bypass`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-            session_id: sessionId
+    return withRetry(async () => {
+        const response = await fetch(`${API_BASE_URL}/documents/process-with-bypass`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                session_id: sessionId
+            })
         })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Cancel processing and refund usage
 export const cancelProcessing = async (sessionId: string) => {
-    const response = await fetch(`${API_BASE_URL}/documents/cancel-processing`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-            session_id: sessionId
+    return withRetry(async () => {
+        const response = await fetch(`${API_BASE_URL}/documents/cancel-processing`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                session_id: sessionId
+            })
         })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Get all documents with pagination and filtering support
@@ -321,11 +410,13 @@ export const getAllDocuments = async (params?: {
     const url = `${API_BASE_URL}/documents/all?${queryParams.toString()}`
     console.log('Fetching documents from URL:', url)
     
-    const response = await fetch(url, {
-        headers: getAuthHeaders()
+    return withRetry(async () => {
+        const response = await fetch(url, {
+            headers: getAuthHeaders()
+        })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Get processed documents with pagination and filtering support
@@ -352,11 +443,13 @@ export const getProcessedDocuments = async (params?: {
     const url = `${API_BASE_URL}/documents/processed?${queryParams.toString()}`
     console.log('Fetching processed documents from URL:', url)
     
-    const response = await fetch(url, {
-        headers: getAuthHeaders()
+    return withRetry(async () => {
+        const response = await fetch(url, {
+            headers: getAuthHeaders()
+        })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // Get documents using the new unified V2 API that combines both /all and /processed endpoints
@@ -393,11 +486,13 @@ export const getDocumentsV2 = async (params?: {
     const url = `${API_BASE_URL}/documents/v2/all?${queryParams.toString()}`
     console.log('Fetching documents from V2 API URL:', url)
     
-    const response = await fetch(url, {
-        headers: getAuthHeaders()
+    return withRetry(async () => {
+        const response = await fetch(url, {
+            headers: getAuthHeaders()
+        })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 // ========================================
@@ -410,23 +505,25 @@ export const requestPresignedUrls = async (files: Array<{
     content_type: string
     size: number
 }>, formatId: string) => {
-    console.log('Requesting presigned URLs for files:', files)
-    console.log('Format ID:', formatId)
-    
-    const response = await fetch(`${API_BASE_URL}/documents/presigned-upload`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-            files,
-            format_id: formatId
+    return withRetry(async () => {
+        console.log('Requesting presigned URLs for files:', files)
+        console.log('Format ID:', formatId)
+        
+        const response = await fetch(`${API_BASE_URL}/documents/presigned-upload`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                files,
+                format_id: formatId
+            })
         })
+        
+        console.log('Presigned URLs response status:', response.status)
+        const result = await handleApiResponse(response)
+        console.log('Presigned URLs result:', result)
+        
+        return result
     })
-    
-    console.log('Presigned URLs response status:', response.status)
-    const result = await handleApiResponse(response)
-    console.log('Presigned URLs result:', result)
-    
-    return result
 }
 
 // Upload file to S3 using presigned URL (Step 2)
@@ -463,26 +560,28 @@ export const confirmUpload = async (uploadSessionId: string, formatId: string, f
     filename: string
     size: number
 }>, formatValidator: boolean = true) => {
-    console.log('Confirming upload for session:', uploadSessionId)
-    console.log('Files to confirm:', files)
-    console.log('Format validator enabled:', formatValidator)
-    
-    const response = await fetch(`${API_BASE_URL}/documents/upload-confirm`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-            upload_session_id: uploadSessionId,
-            format_id: formatId,
-            files,
-            format_validator: formatValidator
+    return withRetry(async () => {
+        console.log('Confirming upload for session:', uploadSessionId)
+        console.log('Files to confirm:', files)
+        console.log('Format validator enabled:', formatValidator)
+        
+        const response = await fetch(`${API_BASE_URL}/documents/upload-confirm`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                upload_session_id: uploadSessionId,
+                format_id: formatId,
+                files,
+                format_validator: formatValidator
+            })
         })
+        
+        console.log('Upload confirmation response status:', response.status)
+        const result = await handleApiResponse(response)
+        console.log('Upload confirmation result:', result)
+        
+        return result
     })
-    
-    console.log('Upload confirmation response status:', response.status)
-    const result = await handleApiResponse(response)
-    console.log('Upload confirmation result:', result)
-    
-    return result
 }
 
 // ========================================
@@ -491,11 +590,13 @@ export const confirmUpload = async (uploadSessionId: string, formatId: string, f
 
 // Company API functions
 export const fetchCompanies = async () => {
-    const response = await fetch(`${API_BASE_URL}/super_admin/companies`, {
-        headers: getAuthHeaders()
+    return withRetry(async () => {
+        const response = await fetch(`${API_BASE_URL}/super_admin/companies`, {
+            headers: getAuthHeaders()
+        })
+        
+        return handleApiResponse(response)
     })
-    
-    return handleApiResponse(response)
 }
 
 export const createCompany = async (companyData: {
