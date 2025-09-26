@@ -757,14 +757,26 @@ function DocumentsPage() {
 
       const data = await handleApiResponse(response);
 
-      // Create a temporary link to download the file
+      if (!data?.download_url) {
+        throw new Error("Download link unavailable");
+      }
+
+      const fileResponse = await fetch(data.download_url);
+
+      if (!fileResponse.ok) {
+        throw new Error(`Download failed with status ${fileResponse.status}`);
+      }
+
+      const blob = await fileResponse.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
       const link = document.createElement("a");
-      link.href = data.download_url;
-      link.download = documentName;
-      link.target = "_blank";
+      link.href = objectUrl;
+      link.download = documentName || "document";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
 
       setMessage("Download started successfully!");
 
@@ -782,14 +794,26 @@ function DocumentsPage() {
     try {
       setMessage("Starting download...");
 
-      // Create a temporary link to download the file directly
+      if (!url) {
+        throw new Error("Download URL is missing");
+      }
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
       const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.target = "_blank";
+      link.href = objectUrl;
+      link.download = filename || "processed-file";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
 
       setMessage("Download started successfully!");
 
