@@ -35,6 +35,8 @@ interface ProcessedDataItem {
   currency_confidence?: number;
   grossWeight: number;
   grossWeight_confidence?: number;
+  netWeight?: number;
+  netWeight_confidence?: number;
   measurementUnit: string;
   measurementUnit_confidence?: number;
   NoOfPackages: number;
@@ -107,6 +109,8 @@ interface GeneralInformation {
   generalDescription_confidence?: number;
   grossWeight: string;
   grossWeight_confidence?: number;
+  netWeight?: string;
+  netWeight_confidence?: number;
   incoterms: string;
   incoterms_confidence?: number;
   invoiceNumber: string | string[];
@@ -280,6 +284,10 @@ const convertUIDataToAPI = (uiData: {
     currency_confidence: uiData.generalInformation.currency_confidence,
     grossWeight: parseFloat(uiData.generalInformation.grossWeight) || 0,
     grossWeight_confidence: uiData.generalInformation.grossWeight_confidence,
+    ...(uiData.generalInformation.netWeight && {
+      netWeight: parseFloat(uiData.generalInformation.netWeight) || 0,
+      netWeight_confidence: uiData.generalInformation.netWeight_confidence,
+    }),
     measurementUnit: uiData.generalInformation.measurementUnit,
     measurementUnit_confidence:
       uiData.generalInformation.measurementUnit_confidence,
@@ -842,6 +850,34 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                         )}
                       </div>
 
+                      <div className="space-y-1">
+                        <Label htmlFor="netWeight" className="text-sm">
+                          Net Weight
+                        </Label>
+                        {isEditMode ? (
+                          <Input
+                            id="netWeight"
+                            value={extractedData.generalInformation.netWeight || ""}
+                            onChange={(e) =>
+                              updateGeneralInformation(
+                                "netWeight",
+                                e.target.value
+                              )
+                            }
+                            className="text-sm"
+                          />
+                        ) : (
+                          <div
+                            className={`p-2 rounded border h-8 flex items-center min-w-[180px] text-sm ${getConfidenceColor(
+                              extractedData.generalInformation
+                                .netWeight_confidence
+                            )}`}
+                          >
+                            {extractedData.generalInformation.netWeight || ""}
+                          </div>
+                        )}
+                      </div>
+                      
                       <div className="space-y-1">
                         <Label htmlFor="measurementUnit" className="text-sm">
                           Measurement

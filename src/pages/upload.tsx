@@ -54,6 +54,8 @@ interface ProcessedDataItem {
   currency_confidence?: number;
   grossWeight: number;
   grossWeight_confidence?: number;
+  netWeight?: number;
+  netWeight_confidence?: number;
   measurementUnit: string;
   measurementUnit_confidence?: number;
   NoOfPackages: number;
@@ -129,6 +131,8 @@ interface GeneralInformation {
   generalDescription_confidence?: number;
   grossWeight: string;
   grossWeight_confidence?: number;
+  netWeight?: string;
+  netWeight_confidence?: number;
   incoterms: string;
   incoterms_confidence?: number;
   invoiceNumber: string | string[];
@@ -437,6 +441,8 @@ function MainPage() {
       generalDescription_confidence: firstItem.generalDescription_confidence,
       grossWeight: firstItem.grossWeight?.toString() || "0",
       grossWeight_confidence: firstItem.grossWeight_confidence,
+      netWeight: firstItem.netWeight?.toString() || "",
+      netWeight_confidence: firstItem.netWeight_confidence,
       incoterms: firstItem.incoterms || "",
       incoterms_confidence: firstItem.incoterms_confidence,
       // Handle both correct and typo versions of invoice number field
