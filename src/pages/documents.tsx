@@ -133,6 +133,13 @@ interface Document {
     format_extension: string;
     is_active: boolean;
   };
+  template?: {
+    template_id: string;
+    template_name: string;
+    template_description?: string;
+  };
+  template_id?: string;
+  template_name?: string;
 }
 
 interface OutputFormat {
@@ -147,6 +154,8 @@ interface OutputFormat {
 interface ProcessedDataItem {
   invoiceNumber: string | string[];
   invoiceNumber_confidence?: number;
+  invoceNumber?: string | string[];
+  invoceNumber_confidence?: number;
   invoiceValue: number;
   invoiceValue_confidence?: number;
   invoiceDate: string;
@@ -171,24 +180,36 @@ interface ProcessedDataItem {
   consigneeAddress_confidence?: number;
   "rob/rocForConsignee": string | null;
   "rob/rocForConsignee_confidence"?: number;
+  rob_rocForConsignee?: string | null;
+  rob_rocForConsignee_confidence?: number;
   consignorName: string;
   consignorName_confidence?: number;
   consignorAddress: string;
   consignorAddress_confidence?: number;
   "rob/rocForConsignor": string | null;
   "rob/rocForConsignor_confidence"?: number;
+  rob_rocForConsignor?: string | null;
+  rob_rocForConsignor_confidence?: number;
+  vesselName?: string;
+  vesselName_confidence?: number;
+  arrivalDate?: string;
+  arrivalDate_confidence?: number;
   items: JobCargoItem[];
+  existItems?: boolean;
 }
+
+type StatisticalEntry = {
+  UOM: string;
+  quantity: number;
+  confidence?: number;
+};
 
 interface JobCargoItem {
   countryOfOrigin: string;
   countryOfOrigin_confidence?: number;
   hsCode: string;
   hsCode_confidence?: number;
-  statisticalUOM: Array<{
-    UOM: string;
-    quantity: number;
-  }>;
+  statisticalUOM: StatisticalEntry[];
   statisticalQty: number;
   statisticalQty_confidence?: number;
   declaredQty: number;
@@ -203,6 +224,10 @@ interface JobCargoItem {
   itemDescription2_confidence?: number;
   itemDescription3: string;
   itemDescription3_confidence?: number;
+  productCode?: string | null;
+  productCode_confidence?: number;
+  extraDescription?: string;
+  extraDescription_confidence?: number;
   // K9-specific fields
   packQtyToBeReleased?: number;
   packQtyToBeReleased_confidence?: number;
@@ -243,10 +268,45 @@ interface GeneralInformation {
   invoiceDate_confidence?: number;
   invoiceValue: string;
   invoiceValue_confidence?: number;
+  vesselName?: string;
+  vesselName_confidence?: number;
+  arrivalDate?: string;
+  arrivalDate_confidence?: number;
 }
 
 interface JobCargo {
   items: DisplayJobCargoItem[];
+}
+
+interface SealnetJobCargoItem {
+  id: string;
+  productCode?: string | null;
+  productCode_confidence?: number;
+  hsCode?: string;
+  hsCode_confidence?: number;
+  declaredQty?: number;
+  declaredQty_confidence?: number;
+  declaredUOM?: string;
+  declaredUOM_confidence?: number;
+  statisticalEntries?: StatisticalEntry[];
+  statisticalDetails?: string;
+  itemAmount?: number;
+  itemAmount_confidence?: number;
+  itemDescription?: string;
+  itemDescription_confidence?: number;
+  extraDescription?: string;
+  extraDescription_confidence?: number;
+}
+
+interface ExtractedData {
+  generalInformation: GeneralInformation;
+  jobCargo: JobCargo;
+  sealnetData?: {
+    items: SealnetJobCargoItem[];
+    existItems?: boolean;
+  };
+  templateType?: "ALDEC" | "SEALNET";
+  rawData?: ProcessedDataItem[];
 }
 
 interface DisplayJobCargoItem {
@@ -271,6 +331,15 @@ interface DisplayJobCargoItem {
   statisticalQty_confidence?: number;
   statisticalUOM: string;
   statisticalUOM_confidence?: number;
+  productCode?: string;
+  productCode_confidence?: number;
+  extraDescription?: string;
+  extraDescription_confidence?: number;
+  statisticalDetails?: string;
+  statisticalDetails_confidence?: number;
+  statisticalEntries?: StatisticalEntry[];
+  sourceDataIndex?: number;
+  sourceItemIndex?: number;
   // K9-specific fields
   packQtyToBeReleased?: number;
   packQtyToBeReleased_confidence?: number;
@@ -320,20 +389,75 @@ function DocumentsPage() {
 
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false);
-  const [extractedData, setExtractedData] = useState<{
-    generalInformation: GeneralInformation;
-    jobCargo: JobCargo;
-  } | null>(null);
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(
+    null
+  );
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [currentOutputFormat, setCurrentOutputFormat] = useState<string | null>(
     null
   );
+  const [currentTemplateName, setCurrentTemplateName] = useState<string | null>(
+    null
+  );
+
+  const detectSealnetTemplate = (
+    templateHint?: string | null,
+    dataItem?: ProcessedDataItem
+  ) => {
+    if (templateHint?.toLowerCase() === "sealnet") {
+      return true;
+    }
+
+    if (!dataItem) {
+      return false;
+    }
+
+    if (
+      "rob_rocForConsignee" in dataItem ||
+      "rob_rocForConsignor" in dataItem ||
+      "vesselName" in dataItem ||
+      "arrivalDate" in dataItem
+    ) {
+      return true;
+    }
+
+    const firstCargoItem =
+      Array.isArray(dataItem.items) && dataItem.items.length > 0
+        ? dataItem.items.find(Boolean)
+        : undefined;
+
+    if (firstCargoItem) {
+      if (
+        "productCode" in firstCargoItem ||
+        "extraDescription" in firstCargoItem
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const formatStatisticalDetailsForDisplay = (
+    details?: Array<{ UOM: string; quantity: number }>
+  ): string => {
+    if (!details || details.length === 0) {
+      return "";
+    }
+    return details
+      .map((detail) =>
+        `${detail.quantity ?? ""} ${detail.UOM || ""}`.trim()
+      )
+      .filter((entry) => entry.length > 0)
+      .join(", ");
+  };
 
   // Convert API data to UI format
   const convertApiDataToUI = (
-    apiData: ProcessedDataItem[]
-  ): { generalInformation: GeneralInformation; jobCargo: JobCargo } => {
+    apiData: ProcessedDataItem[],
+    templateHint?: string | null
+  ): ExtractedData => {
     console.log(
       "convertApiDataToUI - Raw input data:",
       JSON.stringify(apiData, null, 2)
@@ -358,6 +482,7 @@ function DocumentsPage() {
 
     // Use the first item as the base for general information
     const firstItem = dataArray[0];
+    const isSealnet = detectSealnetTemplate(templateHint, firstItem);
     console.log(
       "convertApiDataToUI - First item:",
       JSON.stringify(firstItem, null, 2)
@@ -399,12 +524,20 @@ function DocumentsPage() {
     const generalInformation: GeneralInformation = {
       measurementUnit: firstItem.measurementUnit?.toString() || "",
       measurementUnit_confidence: firstItem.measurementUnit_confidence,
-      robRocForConsignee: firstItem["rob/rocForConsignee"] || "",
+      robRocForConsignee:
+        firstItem["rob/rocForConsignee"] ||
+        (firstItem as any).rob_rocForConsignee ||
+        "",
       robRocForConsignee_confidence:
-        firstItem["rob/rocForConsignee_confidence"],
-      robRocForConsignor: firstItem["rob/rocForConsignor"] || "",
+        firstItem["rob/rocForConsignee_confidence"] ||
+        (firstItem as any).rob_rocForConsignee_confidence,
+      robRocForConsignor:
+        firstItem["rob/rocForConsignor"] ||
+        (firstItem as any).rob_rocForConsignor ||
+        "",
       robRocForConsignor_confidence:
-        firstItem["rob/rocForConsignor_confidence"],
+        firstItem["rob/rocForConsignor_confidence"] ||
+        (firstItem as any).rob_rocForConsignor_confidence,
       NoOfPackages: firstItem.NoOfPackages?.toString() || "0",
       NoOfPackages_confidence: firstItem.NoOfPackages_confidence,
       consigneeAddress: firstItem.consigneeAddress || "",
@@ -425,7 +558,6 @@ function DocumentsPage() {
       netWeight_confidence: firstItem.netWeight_confidence,
       incoterms: firstItem.incoterms || "",
       incoterms_confidence: firstItem.incoterms_confidence,
-      // Handle both correct and typo versions of invoice number field
       invoiceNumber:
         firstItem.invoiceNumber || (firstItem as any).invoceNumber || "",
       invoiceNumber_confidence:
@@ -435,13 +567,59 @@ function DocumentsPage() {
       invoiceDate_confidence: firstItem.invoiceDate_confidence,
       invoiceValue: firstItem.invoiceValue?.toString() || "0",
       invoiceValue_confidence: firstItem.invoiceValue_confidence,
+      vesselName: firstItem.vesselName || "",
+      vesselName_confidence: firstItem.vesselName_confidence,
+      arrivalDate: firstItem.arrivalDate || "",
+      arrivalDate_confidence: firstItem.arrivalDate_confidence,
     };
 
     // Collect all items from all data entries
     const allItems: DisplayJobCargoItem[] = [];
+    const sealnetItems: SealnetJobCargoItem[] = [];
     dataArray.forEach((dataItem, dataIndex) => {
       if (dataItem.items && Array.isArray(dataItem.items)) {
         dataItem.items.forEach((item, itemIndex) => {
+          const statisticalEntries =
+            item.statisticalUOM && Array.isArray(item.statisticalUOM)
+              ? item.statisticalUOM.map((uom) => ({
+                  UOM: uom.UOM,
+                  quantity: uom.quantity,
+                  confidence: uom.confidence,
+                }))
+              : [];
+          const statisticalDetailsDisplay =
+            formatStatisticalDetailsForDisplay(statisticalEntries);
+
+          if (isSealnet) {
+            sealnetItems.push({
+              id: `${dataIndex}-${itemIndex}`,
+              productCode: item.productCode || "",
+              productCode_confidence: item.productCode_confidence,
+              hsCode: item.hsCode || "",
+              hsCode_confidence: item.hsCode_confidence,
+              declaredQty: item.declaredQty,
+              declaredQty_confidence: item.declaredQty_confidence,
+              declaredUOM: item.declaredUOM,
+              declaredUOM_confidence: item.declaredUOM_confidence,
+              statisticalEntries,
+              statisticalDetails: statisticalDetailsDisplay,
+              itemAmount: item.itemAmount,
+              itemAmount_confidence: item.itemAmount_confidence,
+              itemDescription: item.itemDescription,
+              itemDescription_confidence: item.itemDescription_confidence,
+              extraDescription: item.extraDescription,
+              extraDescription_confidence: item.extraDescription_confidence,
+            });
+          }
+
+          const derivedStatisticalQty =
+            item.statisticalQty ??
+            statisticalEntries[0]?.quantity ??
+            item.declaredQty ??
+            0;
+          const derivedStatisticalUOM =
+            statisticalEntries[0]?.UOM || item.declaredUOM || "";
+
           allItems.push({
             id: `${dataIndex}-${itemIndex}`,
             countryOfOrigin: item.countryOfOrigin || "",
@@ -460,17 +638,19 @@ function DocumentsPage() {
             itemDescription2_confidence: item.itemDescription2_confidence,
             itemDescription3: item.itemDescription3 || "",
             itemDescription3_confidence: item.itemDescription3_confidence,
-            statisticalQty: item.statisticalQty || 0,
+            statisticalQty: derivedStatisticalQty || 0,
             statisticalQty_confidence: item.statisticalQty_confidence,
-            statisticalUOM:
-              item.statisticalUOM &&
-              Array.isArray(item.statisticalUOM) &&
-              item.statisticalUOM.length > 0
-                ? item.statisticalUOM.find(
-                    (uom) => uom.quantity === item.statisticalQty
-                  )?.UOM || item.statisticalUOM[0].UOM
-                : item.declaredUOM || "",
+            statisticalUOM: derivedStatisticalUOM,
             statisticalUOM_confidence: item.statisticalQty_confidence,
+            productCode: item.productCode || "",
+            productCode_confidence: item.productCode_confidence,
+            extraDescription: item.extraDescription || "",
+            extraDescription_confidence: item.extraDescription_confidence,
+            statisticalDetails: statisticalDetailsDisplay,
+            statisticalDetails_confidence: item.statisticalQty_confidence,
+            statisticalEntries,
+            sourceDataIndex: dataIndex,
+            sourceItemIndex: itemIndex,
             // K9-specific fields
             packQtyToBeReleased: item.packQtyToBeReleased,
             packQtyToBeReleased_confidence: item.packQtyToBeReleased_confidence,
@@ -484,6 +664,11 @@ function DocumentsPage() {
     return {
       generalInformation,
       jobCargo: { items: allItems },
+      sealnetData: isSealnet
+        ? { items: sealnetItems, existItems: firstItem?.existItems }
+        : undefined,
+      templateType: isSealnet ? "SEALNET" : "ALDEC",
+      rawData: dataArray,
     };
   };
 
@@ -518,6 +703,7 @@ function DocumentsPage() {
   useEffect(() => {
     if (!showPreview) {
       setCurrentOutputFormat(null);
+      setCurrentTemplateName(null);
     }
   }, [showPreview]);
 
@@ -714,13 +900,29 @@ function DocumentsPage() {
     setExpandedGroups(newExpandedGroups);
   };
 
-  const getUniqueFormats = (documents: Document[]) => {
-    // Group documents by base filename first, then get unique formats
-    const baseFilenameGroups = groupDocumentsByBaseFilename(documents);
-    const formats = baseFilenameGroups.map(
-      ([_, groupDocs]) => groupDocs[0].output_format.format_name
+const getUniqueFormats = (documents: Document[]) => {
+  // Group documents by base filename first, then get unique formats
+  const baseFilenameGroups = groupDocumentsByBaseFilename(documents);
+  const formats = baseFilenameGroups.map(
+    ([_, groupDocs]) => groupDocs[0].output_format.format_name
+  );
+  return [...new Set(formats)].join(", ");
+};
+
+const getUniqueTemplates = (documents: Document[]) => {
+  const templates = documents
+    .map((doc) => getTemplateName(doc))
+    .filter((name): name is string => Boolean(name));
+  return [...new Set(templates)].join(", ");
+};
+
+const getTemplateName = (doc?: Document | null): string | null => {
+  if (!doc) return null;
+  return (
+    doc.template?.template_name ||
+      doc.template_name ||
+      null
     );
-    return [...new Set(formats)].join(", ");
   };
 
   const getAllProcessedFilesForGroup = (groupDocuments: Document[]) => {
@@ -944,6 +1146,10 @@ function DocumentsPage() {
 
     // Extract the output format from the first document in the group
     const outputFormatName = groupDocuments[0]?.output_format?.format_name;
+    const templateName =
+      groupDocuments[0]?.template?.template_name ||
+      groupDocuments[0]?.template_name ||
+      null;
     console.log("Output format for preview:", outputFormatName);
     console.log(
       "Group documents:",
@@ -963,12 +1169,13 @@ function DocumentsPage() {
       const processedData = await getSessionProcessedData(sessionId);
 
       // Convert API data to UI format
-      const uiData = convertApiDataToUI(processedData);
+      const uiData = convertApiDataToUI(processedData, templateName);
 
       // Set the extracted data and show preview modal
       setExtractedData(uiData);
       setCurrentSessionId(sessionId);
       setCurrentOutputFormat(outputFormatName || null);
+      setCurrentTemplateName(templateName);
       setShowPreview(true);
       setMessage("");
 
@@ -1549,10 +1756,8 @@ function DocumentsPage() {
                           {groupDocuments.length !== 1 ? "s" : ""}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-sm text-gray-500">
-                          Formats: {getUniqueFormats(groupDocuments)}
-                        </div>
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                        <span>Formats: {getUniqueTemplates(groupDocuments)} {getUniqueFormats(groupDocuments)}</span>
                         <Button
                           variant="destructive"
                           size="sm"
@@ -1605,6 +1810,9 @@ function DocumentsPage() {
                                 Status
                               </th>
                               <th className="text-left p-4 font-semibold text-gray-700">
+                                Template
+                              </th>
+                              <th className="text-left p-4 font-semibold text-gray-700">
                                 Output Format
                               </th>
                               <th className="text-left p-4 font-semibold text-gray-700">
@@ -1618,6 +1826,8 @@ function DocumentsPage() {
                                 // Show only the first document from each file group (usually the original PDF)
                                 const representativeDocument =
                                   fileGroupDocuments[0];
+                                const templateName =
+                                  getTemplateName(representativeDocument);
                                 return (
                                   <tr
                                     key={representativeDocument.document_id}
@@ -1661,6 +1871,12 @@ function DocumentsPage() {
                                               8
                                             )}
                                             ...
+                                            {templateName && (
+                                              <span>
+                                                {" "}
+                                                • Template: {templateName}
+                                              </span>
+                                            )}
                                             {fileGroupDocuments.length > 1 && (
                                               <span>
                                                 {" "}
@@ -1687,6 +1903,11 @@ function DocumentsPage() {
                                             1
                                           )}
                                       </Badge>
+                                    </td>
+                                    <td className="p-4">
+                                      <div className="text-sm text-gray-900">
+                                        {templateName || "Default"}
+                                      </div>
                                     </td>
                                     <td className="p-4">
                                       <div className="text-sm text-gray-900">
@@ -1750,6 +1971,9 @@ function DocumentsPage() {
                                 const displayedFiles = allProcessedFiles.slice(
                                   0,
                                   2
+                                );
+                                const templateName = getTemplateName(
+                                  groupDocuments[0]
                                 );
                                 return displayedFiles.map(
                                   (processedFile, index) => (
@@ -1815,16 +2039,26 @@ function DocumentsPage() {
                                       </td>
                                       <td className="p-4">
                                         <div className="text-sm text-green-900">
-                                          {
-                                            groupDocuments[0]?.output_format
-                                              ?.format_name
-                                          }{" "}
-                                          Form
+                                          {templateName || "Default"}
                                         </div>
+                                      </td>
+                                      <td className="p-4">
+                                      <div className="text-sm text-green-900">
+                                        {
+                                          groupDocuments[0]?.output_format
+                                            ?.format_name
+                                        }{" "}
+                                        Form
+                                      </div>
+                                      <div className="text-xs text-green-600">
+                                        {groupDocuments[0]?.output_format
+                                          ?.format_extension || "Output File"}
+                                      </div>
+                                      {templateName && (
                                         <div className="text-xs text-green-600">
-                                          {groupDocuments[0]?.output_format
-                                            ?.format_extension || "Output File"}
+                                          Template: {templateName}
                                         </div>
+                                      )}
                                       </td>
                                       <td className="p-4">
                                         <div className="flex gap-2">
@@ -1864,15 +2098,18 @@ function DocumentsPage() {
                               } else {
                                 // Show Preview button if no processed files exist and group has session_id
                                 const sessionId = groupDocuments[0]?.session_id;
-                                if (sessionId) {
-                                  const isLoading =
-                                    previewLoading.has(sessionId);
-                                  const allProcessed =
-                                    areAllDocumentsProcessed(groupDocuments);
-                                  const hasFailed =
-                                    hasFailedDocuments(groupDocuments);
-                                  const hasCancelled =
-                                    hasCancelledDocuments(groupDocuments);
+                              if (sessionId) {
+                                const isLoading =
+                                  previewLoading.has(sessionId);
+                                const allProcessed =
+                                  areAllDocumentsProcessed(groupDocuments);
+                                const hasFailed =
+                                  hasFailedDocuments(groupDocuments);
+                                const hasCancelled =
+                                  hasCancelledDocuments(groupDocuments);
+                                const templateName = getTemplateName(
+                                  groupDocuments[0]
+                                );
 
                                   return (
                                     <tr
@@ -1994,19 +2231,24 @@ function DocumentsPage() {
                                             : "Processing"}
                                         </Badge>
                                       </td>
-                                      <td className="p-4">
-                                        <div className="text-sm text-green-900">
-                                          {
-                                            groupDocuments[0]?.output_format
-                                              ?.format_name
-                                          }{" "}
-                                          Form
-                                        </div>
+                                    <td className="p-4">
+                                      <div className="text-sm text-green-900">
+                                        {
+                                          groupDocuments[0]?.output_format
+                                            ?.format_name
+                                        }{" "}
+                                        Form
+                                      </div>
+                                      <div className="text-xs text-green-600">
+                                        {groupDocuments[0]?.output_format
+                                          ?.format_extension || "Output File"}
+                                      </div>
+                                      {templateName && (
                                         <div className="text-xs text-green-600">
-                                          {groupDocuments[0]?.output_format
-                                            ?.format_extension || "Output File"}
+                                          Template: {templateName}
                                         </div>
-                                      </td>
+                                      )}
+                                    </td>
                                       <td className="p-4">
                                         <div className="flex gap-2">
                                           <Button
@@ -2573,6 +2815,7 @@ function DocumentsPage() {
         sessionStatus={null}
         setMessage={setMessage}
         outputFormat={currentOutputFormat || undefined}
+        templateName={currentTemplateName || undefined}
       />
     </div>
   );

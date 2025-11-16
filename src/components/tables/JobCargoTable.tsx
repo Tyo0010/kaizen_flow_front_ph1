@@ -1,6 +1,12 @@
 import React from 'react'
 import { Input } from '../ui/input'
 
+type TableStatisticalEntry = {
+  UOM: string;
+  quantity: number;
+  confidence?: number;
+};
+
 // Interfaces
 export interface DisplayJobCargoItem {
   id: string;
@@ -24,6 +30,15 @@ export interface DisplayJobCargoItem {
   statisticalQty_confidence?: number;
   statisticalUOM: string;
   statisticalUOM_confidence?: number;
+  productCode?: string;
+  productCode_confidence?: number;
+  extraDescription?: string;
+  extraDescription_confidence?: number;
+  statisticalDetails?: string;
+  statisticalDetails_confidence?: number;
+  statisticalEntries?: TableStatisticalEntry[];
+  sourceDataIndex?: number;
+  sourceItemIndex?: number;
   // K9 Form specific fields
   packQtyToBeReleased?: number;
   packQtyToBeReleased_confidence?: number;
@@ -73,12 +88,15 @@ export const JobCargoTable: React.FC<JobCargoTableProps> = ({
     const confidenceKey = `${column.key}_confidence` as keyof DisplayJobCargoItem;
     const confidence = item[confidenceKey] as number | undefined;
 
+    const safeDisplayValue =
+      typeof value === 'number' || typeof value === 'string' ? value : '';
+
     if (isEditMode) {
       return (
         <Input
           type={column.type || 'text'}
           step={column.step}
-          value={value}
+          value={safeDisplayValue}
           onChange={(e) => onUpdate(index, column.key, column.type === 'number' ? e.target.value : e.target.value)}
           className={`w-full border-none p-1 text-xs h-6 ${column.width}`}
         />
@@ -87,7 +105,7 @@ export const JobCargoTable: React.FC<JobCargoTableProps> = ({
 
     return (
       <div className={`p-1 text-xs w-full h-full border rounded ${getConfidenceColor(confidence)}`}>
-        {value}
+        {safeDisplayValue}
       </div>
     );
   };

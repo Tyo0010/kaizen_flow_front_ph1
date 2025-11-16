@@ -42,6 +42,17 @@ export const K9_FORM_COLUMNS: JobCargoColumn[] = [
   { key: 'itemDescription3', label: 'Description 3', width: 'min-w-[120px]' },
 ];
 
+export const SEALNET_FORM_COLUMNS: JobCargoColumn[] = [
+  { key: 'productCode', label: 'Product Code', width: 'min-w-[100px]' },
+  { key: 'hsCode', label: 'HS Code', width: 'min-w-[80px]' },
+  { key: 'declaredQty', label: 'Declared Qty', width: 'min-w-[60px]', type: 'number' },
+  { key: 'declaredUOM', label: 'Declared UOM', width: 'min-w-[60px]' },
+  { key: 'statisticalDetails', label: 'Statistical UOMs', width: 'min-w-[180px]' },
+  { key: 'itemAmount', label: 'Amount', width: 'min-w-[80px]', type: 'number', step: '0.01' },
+  { key: 'itemDescription', label: 'Item Description', width: 'min-w-[200px]' },
+  { key: 'extraDescription', label: 'Extra Description', width: 'min-w-[200px]' },
+];
+
 // Form configuration mapping
 export const FORM_CONFIGURATIONS = {
   'K1': {
@@ -58,6 +69,11 @@ export const FORM_CONFIGURATIONS = {
     name: 'K9 Form',
     columns: K9_FORM_COLUMNS,
     description: 'Advanced customs form with pack quantity fields'
+  },
+  'SEALNET': {
+    name: 'Sealnet Template',
+    columns: SEALNET_FORM_COLUMNS,
+    description: 'Sealnet-specific item breakdown with product codes and extra descriptions'
   }
 } as const;
 

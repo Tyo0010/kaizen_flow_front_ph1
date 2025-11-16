@@ -57,6 +57,7 @@ interface ProcessedDataItem {
   "rob/rocForConsignor_confidence"?: number;
   items: JobCargoItem[];
   overall_confidence?: number;
+  existItems?: boolean;
 }
 
 interface JobCargoItem {
@@ -79,6 +80,10 @@ interface JobCargoItem {
   itemDescription2_confidence?: number;
   itemDescription3: string;
   itemDescription3_confidence?: number;
+  productCode?: string | null;
+  productCode_confidence?: number;
+  extraDescription?: string;
+  extraDescription_confidence?: number;
   // K9-specific fields
   packQtyToBeReleased?: number;
   packQtyToBeReleased_confidence?: number;
@@ -119,10 +124,47 @@ interface GeneralInformation {
   invoiceDate_confidence?: number;
   invoiceValue: string;
   invoiceValue_confidence?: number;
+  vesselName?: string;
+  vesselName_confidence?: number;
+  arrivalDate?: string;
+  arrivalDate_confidence?: number;
 }
 
 interface JobCargo {
   items: DisplayJobCargoItem[];
+}
+
+interface SealnetJobCargoItem {
+  id: string;
+  productCode?: string | null;
+  productCode_confidence?: number;
+  hsCode?: string;
+  hsCode_confidence?: number;
+  declaredQty?: number;
+  declaredQty_confidence?: number;
+  declaredUOM?: string;
+  declaredUOM_confidence?: number;
+  statisticalDetails?: string;
+  statisticalEntries?: StatisticalUOM[];
+  itemAmount?: number;
+  itemAmount_confidence?: number;
+  itemDescription?: string;
+  itemDescription_confidence?: number;
+  extraDescription?: string;
+  extraDescription_confidence?: number;
+}
+
+interface SealnetData {
+  items: SealnetJobCargoItem[];
+  existItems?: boolean;
+}
+
+interface ExtractedPreviewData {
+  generalInformation: GeneralInformation;
+  jobCargo: JobCargo;
+  sealnetData?: SealnetData;
+  templateType?: "ALDEC" | "SEALNET";
+  rawData?: any;
 }
 
 interface SessionDocument {
@@ -164,15 +206,9 @@ interface SessionStatusResponse {
 interface PreviewModalProps {
   showPreview: boolean;
   setShowPreview: (show: boolean) => void;
-  extractedData: {
-    generalInformation: GeneralInformation;
-    jobCargo: JobCargo;
-  } | null;
+  extractedData: ExtractedPreviewData | null;
   setExtractedData: React.Dispatch<
-    React.SetStateAction<{
-      generalInformation: GeneralInformation;
-      jobCargo: JobCargo;
-    } | null>
+    React.SetStateAction<ExtractedPreviewData | null>
   >;
   isEditMode: boolean;
   setIsEditMode: (mode: boolean) => void;
@@ -183,6 +219,7 @@ interface PreviewModalProps {
   setMessage: (message: string) => void;
   outputFormat?: string; // Add output format prop
   allowFormTypeChange?: boolean; // Allow changing form type in preview
+  templateName?: string;
 }
 
 // Utility function to get background color based on confidence score
@@ -212,6 +249,23 @@ const formatInvoiceNumbers = (invoiceNumber: string | string[]): string => {
 const parseInvoiceNumbers = (invoiceNumberString: string): string[] => {
   if (!invoiceNumberString) return [];
   return invoiceNumberString.split(",").map(num => num.trim()).filter(num => num.length > 0);
+};
+
+const parseStatisticalDetailsString = (value: string): StatisticalUOM[] => {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0)
+    .map((segment) => {
+      const parts = segment.split(/\s+/);
+      const uom = parts.pop() || "";
+      const qty = parseFloat(parts.join(" "));
+      return {
+        UOM: uom,
+        quantity: isNaN(qty) ? 0 : qty,
+      };
+    });
 };
 
 // Map output format names to form types
@@ -260,10 +314,234 @@ const mapOutputFormatToFormType = (outputFormat?: string): string => {
 };
 
 // Convert UI data back to API format for updates
-const convertUIDataToAPI = (uiData: {
-  generalInformation: GeneralInformation;
-  jobCargo: JobCargo;
-}): ProcessedDataItem[] => {
+const convertUIDataToAPI = (
+  uiData: ExtractedPreviewData
+): ProcessedDataItem[] => {
+  if (uiData.templateType === "SEALNET" && uiData.rawData) {
+    const rawEntries = Array.isArray(uiData.rawData)
+      ? uiData.rawData
+      : [uiData.rawData];
+
+    const clonedEntries: ProcessedDataItem[] = rawEntries.map(
+      (entry: ProcessedDataItem) => ({
+        ...entry,
+        items: entry.items
+          ? entry.items.map((item: JobCargoItem) => ({
+              ...item,
+              statisticalUOM: item.statisticalUOM
+                ? item.statisticalUOM.map((detail: StatisticalUOM) => ({
+                    ...detail,
+                  }))
+                : [],
+            }))
+          : [],
+      })
+    );
+
+    const general = uiData.generalInformation;
+    const normalizedInvoice =
+      typeof general.invoiceNumber === "string"
+        ? general.invoiceNumber.includes(",")
+          ? parseInvoiceNumbers(general.invoiceNumber)
+          : general.invoiceNumber
+        : general.invoiceNumber;
+
+    const assign = (target: any, keys: string[], value: any) => {
+      keys.forEach((key) => {
+        target[key] = value;
+      });
+    };
+
+    const toNumber = (value: any) => {
+      const parsed = Number(value);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    clonedEntries.forEach((entry, dataIndex) => {
+      assign(entry, ["measurementUnit"], general.measurementUnit);
+      assign(
+        entry,
+        ["measurementUnit_confidence"],
+        general.measurementUnit_confidence
+      );
+      assign(entry, ["incoterms"], general.incoterms);
+      assign(entry, ["incoterms_confidence"], general.incoterms_confidence);
+      assign(entry, ["currency"], general.currency);
+      assign(entry, ["currency_confidence"], general.currency_confidence);
+      assign(entry, ["generalDescription"], general.generalDescription || "");
+      assign(
+        entry,
+        ["generalDescription_confidence"],
+        general.generalDescription_confidence
+      );
+      assign(entry, ["invoiceDate"], general.invoiceDate || "");
+      assign(
+        entry,
+        ["invoiceDate_confidence"],
+        general.invoiceDate_confidence
+      );
+      assign(entry, ["invoiceValue"], toNumber(general.invoiceValue));
+      assign(
+        entry,
+        ["invoiceValue_confidence"],
+        general.invoiceValue_confidence
+      );
+      assign(entry, ["grossWeight"], toNumber(general.grossWeight));
+      assign(
+        entry,
+        ["grossWeight_confidence"],
+        general.grossWeight_confidence
+      );
+      if (general.netWeight !== undefined) {
+        assign(entry, ["netWeight"], toNumber(general.netWeight));
+        assign(entry, ["netWeight_confidence"], general.netWeight_confidence);
+      }
+      assign(entry, ["NoOfPackages"], parseInt(general.NoOfPackages) || 0);
+      assign(
+        entry,
+        ["NoOfPackages_confidence"],
+        general.NoOfPackages_confidence
+      );
+      assign(entry, ["consigneeName"], general.consigneeName || "");
+      assign(
+        entry,
+        ["consigneeName_confidence"],
+        general.consigneeName_confidence
+      );
+      assign(entry, ["consigneeAddress"], general.consigneeAddress || "");
+      assign(
+        entry,
+        ["consigneeAddress_confidence"],
+        general.consigneeAddress_confidence
+      );
+      assign(entry, ["consignorName"], general.consignorName || "");
+      assign(
+        entry,
+        ["consignorName_confidence"],
+        general.consignorName_confidence
+      );
+      assign(entry, ["consignorAddress"], general.consignorAddress || "");
+      assign(
+        entry,
+        ["consignorAddress_confidence"],
+        general.consignorAddress_confidence
+      );
+      assign(entry, ["vesselName"], general.vesselName || "");
+      assign(entry, ["vesselName_confidence"], general.vesselName_confidence);
+      assign(entry, ["arrivalDate"], general.arrivalDate || "");
+      assign(
+        entry,
+        ["arrivalDate_confidence"],
+        general.arrivalDate_confidence
+      );
+      assign(entry, ["invoiceNumber", "invoceNumber"], normalizedInvoice);
+      assign(
+        entry,
+        ["invoiceNumber_confidence", "invoceNumber_confidence"],
+        general.invoiceNumber_confidence
+      );
+      assign(
+        entry,
+        ["rob_rocForConsignee", "rob/rocForConsignee"],
+        general.robRocForConsignee || null
+      );
+      assign(
+        entry,
+        [
+          "rob_rocForConsignee_confidence",
+          "rob/rocForConsignee_confidence",
+        ],
+        general.robRocForConsignee_confidence
+      );
+      assign(
+        entry,
+        ["rob_rocForConsignor", "rob/rocForConsignor"],
+        general.robRocForConsignor || null
+      );
+      assign(
+        entry,
+        [
+          "rob_rocForConsignor_confidence",
+          "rob/rocForConsignor_confidence",
+        ],
+        general.robRocForConsignor_confidence
+      );
+      entry.existItems =
+        uiData.sealnetData?.existItems ?? entry.existItems;
+
+      if (!entry.items || !Array.isArray(entry.items)) {
+        return;
+      }
+
+      entry.items = entry.items.map((rawItem: JobCargoItem, itemIndex: number) => {
+        const uiItem =
+          uiData.jobCargo.items.find(
+            (item) =>
+              item.sourceDataIndex === dataIndex &&
+              item.sourceItemIndex === itemIndex
+          ) ||
+          uiData.jobCargo.items.find(
+            (item) => item.id === `${dataIndex}-${itemIndex}`
+          ) ||
+          uiData.jobCargo.items[itemIndex];
+
+        if (!uiItem) {
+          return rawItem;
+        }
+
+        const updatedItem: any = { ...rawItem };
+
+        updatedItem.productCode =
+          uiItem.productCode !== undefined ? uiItem.productCode : null;
+        updatedItem.productCode_confidence = uiItem.productCode_confidence;
+        updatedItem.hsCode = uiItem.hsCode || "";
+        updatedItem.hsCode_confidence = uiItem.hsCode_confidence;
+        updatedItem.itemDescription = uiItem.itemDescription || "";
+        updatedItem.itemDescription_confidence =
+          uiItem.itemDescription_confidence;
+        updatedItem.extraDescription = uiItem.extraDescription || "";
+        updatedItem.extraDescription_confidence =
+          uiItem.extraDescription_confidence;
+        updatedItem.declaredQty = toNumber(uiItem.declaredQty);
+        updatedItem.declaredQty_confidence = uiItem.declaredQty_confidence;
+        updatedItem.declaredUOM = uiItem.declaredUOM || "";
+        updatedItem.declaredUOM_confidence = uiItem.declaredUOM_confidence;
+        updatedItem.itemAmount = toNumber(uiItem.itemAmount);
+        updatedItem.itemAmount_confidence = uiItem.itemAmount_confidence;
+        updatedItem.statisticalQty = toNumber(uiItem.statisticalQty);
+        updatedItem.statisticalQty_confidence =
+          uiItem.statisticalQty_confidence;
+        updatedItem.packQtyToBeReleased = uiItem.packQtyToBeReleased;
+        updatedItem.packQtyToBeReleased_confidence =
+          uiItem.packQtyToBeReleased_confidence;
+        updatedItem.packUOMToBeReleased = uiItem.packUOMToBeReleased;
+        updatedItem.packUOMToBeReleased_confidence =
+          uiItem.packUOMToBeReleased_confidence;
+
+        const statsEntries: StatisticalUOM[] =
+          (uiItem.statisticalEntries &&
+            uiItem.statisticalEntries.length > 0 &&
+            uiItem.statisticalEntries) ||
+          rawItem.statisticalUOM ||
+          (uiItem.statisticalDetails
+            ? parseStatisticalDetailsString(uiItem.statisticalDetails)
+            : []);
+
+        updatedItem.statisticalUOM = statsEntries
+          ? statsEntries.map((detail: StatisticalUOM) => ({
+              UOM: detail.UOM || "",
+              quantity: toNumber(detail.quantity),
+              confidence: detail.confidence,
+            }))
+          : [];
+
+        return updatedItem;
+      });
+    });
+
+    return clonedEntries;
+  }
+
   // Handle invoice number conversion - if it's a string with commas, convert to array
   let invoiceNumber = uiData.generalInformation.invoiceNumber;
   if (typeof invoiceNumber === "string" && invoiceNumber.includes(",")) {
@@ -367,24 +645,40 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
   setMessage,
   outputFormat,
   allowFormTypeChange = true,
+  templateName,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Determine form type based on output format and sync state
+  const derivedTemplateType = React.useMemo<"ALDEC" | "SEALNET">(() => {
+    if (templateName?.toLowerCase() === "sealnet") {
+      return "SEALNET";
+    }
+    if (extractedData?.templateType === "SEALNET") {
+      return "SEALNET";
+    }
+    if (extractedData?.sealnetData?.items?.length) {
+      return "SEALNET";
+    }
+    return "ALDEC";
+  }, [templateName, extractedData]);
+  const isSealnetTemplate = derivedTemplateType === "SEALNET";
+
+  // Determine form type based on output format and template
   const formType = mapOutputFormatToFormType(outputFormat);
+  const resolvedFormType = isSealnetTemplate ? "SEALNET" : formType;
   const [selectedFormType, setSelectedFormType] = useState<string>(() => {
-    return mapOutputFormatToFormType(outputFormat);
+    return resolvedFormType;
   });
 
   // Force sync state with computed form type
   React.useEffect(() => {
-    if (formType !== selectedFormType) {
-      setSelectedFormType(formType);
+    if (resolvedFormType !== selectedFormType) {
+      setSelectedFormType(resolvedFormType);
     }
-  }, [formType, selectedFormType]);
+  }, [resolvedFormType, selectedFormType]);
 
   // Clear error when modal opens/closes and validate data
   React.useEffect(() => {
@@ -400,13 +694,257 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
         setError(
           "General information is missing. Please reprocess the documents."
         );
+      } else if (isSealnetTemplate) {
+        if (
+          !extractedData.sealnetData ||
+          !extractedData.sealnetData.items ||
+          extractedData.sealnetData.items.length === 0
+        ) {
+          setError(
+            "Sealnet cargo information is missing. Please reprocess the documents."
+          );
+        }
       } else if (!extractedData.jobCargo || !extractedData.jobCargo.items) {
         setError(
           "Job cargo information is missing. Please reprocess the documents."
         );
       }
     }
-  }, [showPreview, extractedData]);
+  }, [showPreview, extractedData, isSealnetTemplate]);
+
+  const renderSealnetCell = (
+    value?: React.ReactNode,
+    confidence?: number,
+    multiline = false
+  ) => {
+    const hasValue = value !== undefined && value !== null && value !== "";
+    return (
+      <div
+        className={`p-2 rounded border text-xs ${
+          multiline ? "min-h-[3rem]" : "min-h-[2rem]"
+        } ${getConfidenceColor(confidence)}`}
+      >
+        {hasValue ? value : <span className="text-gray-400">—</span>}
+      </div>
+    );
+  };
+
+  const SealnetField = ({
+    label,
+    value,
+    confidence,
+    multiline = false,
+    fieldKey,
+  }: {
+    label: string;
+    value?: React.ReactNode;
+    confidence?: number;
+    multiline?: boolean;
+    fieldKey?: keyof GeneralInformation;
+  }) => {
+    const stringValue =
+      value === undefined || value === null ? "" : String(value);
+
+    if (isEditMode && fieldKey) {
+      if (multiline) {
+        return (
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              {label}
+            </Label>
+            <textarea
+              value={stringValue}
+              onChange={(e) =>
+                updateGeneralInformation(fieldKey, e.target.value)
+              }
+              className="w-full p-2 border rounded-md text-xs leading-tight min-h-[3rem]"
+            />
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-1">
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            {label}
+          </Label>
+          <Input
+            value={stringValue}
+            onChange={(e) => updateGeneralInformation(fieldKey, e.target.value)}
+            className="text-xs"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-1">
+        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          {label}
+        </Label>
+        {renderSealnetCell(value, confidence, multiline)}
+      </div>
+    );
+  };
+
+  const renderSealnetGeneralInformation = () => {
+    if (!extractedData?.generalInformation) {
+      return null;
+    }
+
+    const info = extractedData.generalInformation;
+
+    return (
+      <>
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1.5 rounded">
+            INVOICE INFORMATION
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-3">
+            <SealnetField
+              label="Invoice No."
+              value={formatInvoiceNumbers(info.invoiceNumber)}
+              confidence={info.invoiceNumber_confidence}
+              multiline
+              fieldKey="invoiceNumber"
+            />
+            <SealnetField
+              label="Invoice Value"
+              value={info.invoiceValue}
+              confidence={info.invoiceValue_confidence}
+              fieldKey="invoiceValue"
+            />
+            <SealnetField
+              label="Invoice Date"
+              value={info.invoiceDate}
+              confidence={info.invoiceDate_confidence}
+              fieldKey="invoiceDate"
+            />
+            <SealnetField
+              label="Incoterms"
+              value={info.incoterms}
+              confidence={info.incoterms_confidence}
+              fieldKey="incoterms"
+            />
+            <SealnetField
+              label="Currency"
+              value={info.currency}
+              confidence={info.currency_confidence}
+              fieldKey="currency"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1.5 rounded">
+            SHIPMENT INFORMATION
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-3">
+            <SealnetField
+              label="Vessel Name"
+              value={info.vesselName}
+              confidence={info.vesselName_confidence}
+              multiline
+              fieldKey="vesselName"
+            />
+            <SealnetField
+              label="Arrival Date"
+              value={info.arrivalDate}
+              confidence={info.arrivalDate_confidence}
+              fieldKey="arrivalDate"
+            />
+            <SealnetField
+              label="Gross Weight"
+              value={info.grossWeight}
+              confidence={info.grossWeight_confidence}
+              fieldKey="grossWeight"
+            />
+            <SealnetField
+              label="Measurement Unit"
+              value={info.measurementUnit}
+              confidence={info.measurementUnit_confidence}
+              fieldKey="measurementUnit"
+            />
+            <SealnetField
+              label="No. of Packages"
+              value={info.NoOfPackages}
+              confidence={info.NoOfPackages_confidence}
+              fieldKey="NoOfPackages"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1.5 rounded">
+            CARGO DESCRIPTION
+          </h3>
+          <div className="pl-3">
+            <SealnetField
+              label="General Description"
+              value={info.generalDescription}
+              confidence={info.generalDescription_confidence}
+              multiline
+              fieldKey="generalDescription"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="space-y-3 bg-white border rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-800">
+              CONSIGNEE INFORMATION
+            </h4>
+            <SealnetField
+              label="Name"
+              value={info.consigneeName}
+              confidence={info.consigneeName_confidence}
+              multiline
+              fieldKey="consigneeName"
+            />
+            <SealnetField
+              label="Address"
+              value={info.consigneeAddress}
+              confidence={info.consigneeAddress_confidence}
+              multiline
+              fieldKey="consigneeAddress"
+            />
+            <SealnetField
+              label="ROB/ROC"
+              value={info.robRocForConsignee}
+              confidence={info.robRocForConsignee_confidence}
+              fieldKey="robRocForConsignee"
+            />
+          </div>
+
+          <div className="space-y-3 bg-white border rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-800">
+              CONSIGNOR INFORMATION
+            </h4>
+            <SealnetField
+              label="Name"
+              value={info.consignorName}
+              confidence={info.consignorName_confidence}
+              multiline
+              fieldKey="consignorName"
+            />
+            <SealnetField
+              label="Address"
+              value={info.consignorAddress}
+              confidence={info.consignorAddress_confidence}
+              multiline
+              fieldKey="consignorAddress"
+            />
+            <SealnetField
+              label="ROB/ROC"
+              value={info.robRocForConsignor}
+              confidence={info.robRocForConsignor_confidence}
+              fieldKey="robRocForConsignor"
+            />
+          </div>
+        </div>
+      </>
+    );
+  };
 
   const clearError = () => {
     setError("");
@@ -504,9 +1042,9 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
       return;
     }
 
-    try {
-      setError(""); // Clear any existing errors
-      const updatedItems = [...extractedData.jobCargo.items];
+  try {
+    setError(""); // Clear any existing errors
+    const updatedItems = [...extractedData.jobCargo.items];
 
       // Validate itemIndex
       if (itemIndex < 0 || itemIndex >= updatedItems.length) {
@@ -514,21 +1052,35 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
         return;
       }
 
-      updatedItems[itemIndex] = {
-        ...updatedItems[itemIndex],
-        [field]:
-          field === "declaredQty" ||
-          field === "itemAmount" ||
-          field === "statisticalQty" ||
-          field === "packQtyToBeReleased"
-            ? Number(value)
-            : value,
-      };
+    const numericFields: Array<keyof DisplayJobCargoItem> = [
+      "declaredQty",
+      "itemAmount",
+      "statisticalQty",
+      "packQtyToBeReleased",
+    ];
 
-      setExtractedData({
-        ...extractedData,
-        jobCargo: {
-          ...extractedData.jobCargo,
+    const shouldCastToNumber =
+      typeof value === "number" || numericFields.includes(field);
+
+    const nextValue = shouldCastToNumber ? Number(value) : value;
+
+    const nextItem: DisplayJobCargoItem = {
+      ...updatedItems[itemIndex],
+      [field]: nextValue,
+    };
+
+    if (field === "statisticalDetails") {
+      nextItem.statisticalEntries = parseStatisticalDetailsString(
+        String(value)
+      );
+    }
+
+    updatedItems[itemIndex] = nextItem;
+
+    setExtractedData({
+      ...extractedData,
+      jobCargo: {
+        ...extractedData.jobCargo,
           items: updatedItems,
         },
       });
@@ -653,6 +1205,10 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
 
               <div className="flex-1 overflow-auto w-full">
                 <TabsContent value="general" className="space-y-4 mt-4">
+                  {isSealnetTemplate ? (
+                    renderSealnetGeneralInformation()
+                  ) : (
+                    <>
                   {/* INVOICE INFORMATION */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1.5 rounded">
@@ -1204,13 +1760,15 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                       </div>
                     </div>
                   </div>
+                    </>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="cargo" className="space-y-4 mt-4">
                   <DynamicJobCargoTable
                     selectedFormType={selectedFormType}
                     onFormTypeChange={setSelectedFormType}
-                    showFormSelector={allowFormTypeChange}
+                    showFormSelector={allowFormTypeChange && !isSealnetTemplate}
                     items={extractedData.jobCargo.items}
                     isEditMode={isEditMode}
                     onUpdate={updateJobCargo}

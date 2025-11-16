@@ -555,15 +555,26 @@ export const uploadToS3 = async (file: File, uploadUrl: string, contentType: str
 }
 
 // Confirm upload and trigger processing (Step 3)
+export const fetchDocumentTemplates = async () => {
+    return withRetry(async () => {
+        const response = await fetch(`${API_BASE_URL}/documents/templates`, {
+            headers: getAuthHeaders()
+        })
+
+        return handleApiResponse(response)
+    })
+}
+
 export const confirmUpload = async (uploadSessionId: string, formatId: string, files: Array<{
     s3_key: string
     filename: string
     size: number
-}>, formatValidator: boolean = true) => {
+}>, formatValidator: boolean = true, templateId: string) => {
     return withRetry(async () => {
         console.log('Confirming upload for session:', uploadSessionId)
         console.log('Files to confirm:', files)
         console.log('Format validator enabled:', formatValidator)
+        console.log('Template ID:', templateId)
         
         const response = await fetch(`${API_BASE_URL}/documents/upload-confirm`, {
             method: 'POST',
@@ -572,7 +583,8 @@ export const confirmUpload = async (uploadSessionId: string, formatId: string, f
                 upload_session_id: uploadSessionId,
                 format_id: formatId,
                 files,
-                format_validator: formatValidator
+                format_validator: formatValidator,
+                template_id: templateId
             })
         })
         

@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 import {
   API_BASE_URL,
   getAuthHeaders,
@@ -11,6 +12,7 @@ import {
   processWithBypass,
   cancelProcessing,
   getSessionIssues,
+  fetchDocumentTemplates,
 } from "../utils/api";
 import type { SessionIssuesResponse } from "../utils/api";
 import { Checkbox } from "../components/ui/checkbox";
@@ -40,10 +42,20 @@ interface OutputFormat {
   is_active: boolean;
 }
 
+interface DocumentTemplate {
+  template_id: string;
+  template_name: string;
+  template_description?: string;
+}
+
+const DEFAULT_TEMPLATE_NAME = "ALDEC";
+
 // Updated interface to match API response structure
 interface ProcessedDataItem {
   invoiceNumber: string | string[];
   invoiceNumber_confidence?: number;
+  invoceNumber?: string | string[];
+  invoceNumber_confidence?: number;
   invoiceValue: number;
   invoiceValue_confidence?: number;
   invoiceDate: string;
@@ -68,24 +80,36 @@ interface ProcessedDataItem {
   consigneeAddress_confidence?: number;
   "rob/rocForConsignee": string | null;
   "rob/rocForConsignee_confidence"?: number;
+  rob_rocForConsignee?: string | null;
+  rob_rocForConsignee_confidence?: number;
   consignorName: string;
   consignorName_confidence?: number;
   consignorAddress: string;
   consignorAddress_confidence?: number;
   "rob/rocForConsignor": string | null;
   "rob/rocForConsignor_confidence"?: number;
+  rob_rocForConsignor?: string | null;
+  rob_rocForConsignor_confidence?: number;
+  vesselName?: string;
+  vesselName_confidence?: number;
+  arrivalDate?: string;
+  arrivalDate_confidence?: number;
   items: JobCargoItem[];
+  existItems?: boolean;
 }
+
+type StatisticalEntry = {
+  UOM: string;
+  quantity: number;
+  confidence?: number;
+};
 
 interface JobCargoItem {
   countryOfOrigin: string;
   countryOfOrigin_confidence?: number;
   hsCode: string;
   hsCode_confidence?: number;
-  statisticalUOM: Array<{
-    UOM: string;
-    quantity: number;
-  }>;
+  statisticalUOM: StatisticalEntry[];
   statisticalQty: number;
   statisticalQty_confidence?: number;
   declaredQty: number;
@@ -100,6 +124,10 @@ interface JobCargoItem {
   itemDescription2_confidence?: number;
   itemDescription3: string;
   itemDescription3_confidence?: number;
+  productCode?: string | null;
+  productCode_confidence?: number;
+  extraDescription?: string;
+  extraDescription_confidence?: number;
   // K9-specific fields
   packQtyToBeReleased?: number;
   packQtyToBeReleased_confidence?: number;
@@ -141,10 +169,45 @@ interface GeneralInformation {
   invoiceDate_confidence?: number;
   invoiceValue: string;
   invoiceValue_confidence?: number;
+  vesselName?: string;
+  vesselName_confidence?: number;
+  arrivalDate?: string;
+  arrivalDate_confidence?: number;
 }
 
 interface JobCargo {
   items: DisplayJobCargoItem[];
+}
+
+interface SealnetJobCargoItem {
+  id: string;
+  productCode?: string | null;
+  productCode_confidence?: number;
+  hsCode?: string;
+  hsCode_confidence?: number;
+  declaredQty?: number;
+  declaredQty_confidence?: number;
+  declaredUOM?: string;
+  declaredUOM_confidence?: number;
+  statisticalEntries?: StatisticalEntry[];
+  statisticalDetails?: string;
+  itemAmount?: number;
+  itemAmount_confidence?: number;
+  itemDescription?: string;
+  itemDescription_confidence?: number;
+  extraDescription?: string;
+  extraDescription_confidence?: number;
+}
+
+interface ExtractedData {
+  generalInformation: GeneralInformation;
+  jobCargo: JobCargo;
+  sealnetData?: {
+    items: SealnetJobCargoItem[];
+    existItems?: boolean;
+  };
+  templateType?: "ALDEC" | "SEALNET";
+  rawData?: ProcessedDataItem[];
 }
 
 // For UI display (simplified structure)
@@ -170,6 +233,15 @@ interface DisplayJobCargoItem {
   statisticalQty_confidence?: number;
   statisticalUOM: string;
   statisticalUOM_confidence?: number;
+  productCode?: string;
+  productCode_confidence?: number;
+  extraDescription?: string;
+  extraDescription_confidence?: number;
+  statisticalDetails?: string;
+  statisticalDetails_confidence?: number;
+  statisticalEntries?: StatisticalEntry[];
+  sourceDataIndex?: number;
+  sourceItemIndex?: number;
   // K9-specific fields
   packQtyToBeReleased?: number;
   packQtyToBeReleased_confidence?: number;
@@ -313,16 +385,49 @@ function MainPage() {
   const [outputFormat, setOutputFormat] = useState("");
   const [formatValidator, setFormatValidator] = useState(false);
   const [outputFormats, setOutputFormats] = useState<OutputFormat[]>([]);
+  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState("");
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [loadingFormats, setLoadingFormats] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  const selectedTemplateInfo = useMemo(
+    () =>
+      templates.find(
+        (template) => template.template_id === selectedTemplate
+      ) || null,
+    [templates, selectedTemplate]
+  );
+  const isSealnetTemplate =
+    selectedTemplateInfo?.template_name?.toLowerCase() === "sealnet";
+
+  const displayedOutputFormats = useMemo(() => {
+    if (!outputFormats || outputFormats.length === 0) {
+      return [];
+    }
+
+    // === HIGHLIGHT: Sort + filter output formats (SEALNET enforces K1/K2) ===
+    const sortedFormats = [...outputFormats].sort((a, b) =>
+      a.format_name.localeCompare(b.format_name)
+    );
+
+    if (!isSealnetTemplate) {
+      return sortedFormats;
+    }
+
+    return sortedFormats.filter((format) => {
+      const lowerName = format.format_name?.toLowerCase() || "";
+      return lowerName.includes("k1") || lowerName.includes("k2");
+    });
+    // === END HIGHLIGHT ===
+  }, [outputFormats, isSealnetTemplate]);
 
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false);
-  const [extractedData, setExtractedData] = useState<{
-    generalInformation: GeneralInformation;
-    jobCargo: JobCargo;
-  } | null>(null);
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(
+    null
+  );
   const [isEditMode, setIsEditMode] = useState(false);
 
   // Session tracking for processing status
@@ -352,7 +457,20 @@ function MainPage() {
 
   useEffect(() => {
     fetchOutputFormats();
+    fetchTemplates();
   }, []);
+
+  useEffect(() => {
+    if (
+      isSealnetTemplate &&
+      outputFormat &&
+      !displayedOutputFormats.some(
+        (format) => format.format_id === outputFormat
+      )
+    ) {
+      setOutputFormat(displayedOutputFormats[0]?.format_id || "");
+    }
+  }, [isSealnetTemplate, displayedOutputFormats, outputFormat]);
 
   // Cleanup polling interval on component unmount or when pollingSession changes
   useEffect(() => {
@@ -381,10 +499,63 @@ function MainPage() {
     }));
   };
 
+  const detectSealnetTemplate = (
+    templateHint?: string | null,
+    dataItem?: ProcessedDataItem
+  ) => {
+    if (templateHint?.toLowerCase() === "sealnet") {
+      return true;
+    }
+
+    if (!dataItem) {
+      return false;
+    }
+
+    if (
+      "rob_rocForConsignee" in dataItem ||
+      "rob_rocForConsignor" in dataItem ||
+      "vesselName" in dataItem ||
+      "arrivalDate" in dataItem
+    ) {
+      return true;
+    }
+
+    const firstCargoItem =
+      Array.isArray(dataItem.items) && dataItem.items.length > 0
+        ? dataItem.items.find(Boolean)
+        : undefined;
+
+    if (firstCargoItem) {
+      if (
+        "productCode" in firstCargoItem ||
+        "extraDescription" in firstCargoItem
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   // Convert API data to UI format
-  const convertApiDataToUI = (
-    apiData: ProcessedDataItem[]
-  ): { generalInformation: GeneralInformation; jobCargo: JobCargo } => {
+const formatStatisticalDetailsForDisplay = (
+  details?: Array<{ UOM: string; quantity: number }>
+): string => {
+  if (!details || details.length === 0) {
+    return "";
+  }
+  return details
+    .map((detail) =>
+      `${detail.quantity ?? ""} ${detail.UOM || ""}`.trim()
+    )
+    .filter((entry) => entry.length > 0)
+    .join(", ");
+};
+
+const convertApiDataToUI = (
+  apiData: ProcessedDataItem[],
+  templateHint?: string | null
+): ExtractedData => {
     console.log(
       "convertApiDataToUI - Raw input data:",
       JSON.stringify(apiData, null, 2)
@@ -394,37 +565,29 @@ function MainPage() {
       throw new Error("No processed data available");
     }
 
-    // Handle both array and single object responses
     const dataArray = Array.isArray(apiData) ? apiData : [apiData];
-    console.log(
-      "convertApiDataToUI - Data array:",
-      JSON.stringify(dataArray, null, 2)
-    );
-
-    // Use the first item as the base for general information
     const firstItem = dataArray[0];
-    console.log(
-      "convertApiDataToUI - First item:",
-      JSON.stringify(firstItem, null, 2)
-    );
-    console.log(
-      "convertApiDataToUI - Invoice number from first item:",
-      firstItem.invoiceNumber
-    );
-    console.log(
-      "convertApiDataToUI - Invoice number with typo from first item:",
-      (firstItem as any).invoceNumber
-    );
+    const isSealnet = detectSealnetTemplate(templateHint, firstItem);
+
+    console.log("convertApiDataToUI - Using Sealnet layout:", isSealnet);
 
     const generalInformation: GeneralInformation = {
       measurementUnit: firstItem.measurementUnit?.toString() || "",
       measurementUnit_confidence: firstItem.measurementUnit_confidence,
-      robRocForConsignee: firstItem["rob/rocForConsignee"] || "",
+      robRocForConsignee:
+        firstItem["rob/rocForConsignee"] ||
+        (firstItem as any).rob_rocForConsignee ||
+        "",
       robRocForConsignee_confidence:
-        firstItem["rob/rocForConsignee_confidence"],
-      robRocForConsignor: firstItem["rob/rocForConsignor"] || "",
+        firstItem["rob/rocForConsignee_confidence"] ||
+        (firstItem as any).rob_rocForConsignee_confidence,
+      robRocForConsignor:
+        firstItem["rob/rocForConsignor"] ||
+        (firstItem as any).rob_rocForConsignor ||
+        "",
       robRocForConsignor_confidence:
-        firstItem["rob/rocForConsignor_confidence"],
+        firstItem["rob/rocForConsignor_confidence"] ||
+        (firstItem as any).rob_rocForConsignor_confidence,
       NoOfPackages: firstItem.NoOfPackages?.toString() || "0",
       NoOfPackages_confidence: firstItem.NoOfPackages_confidence,
       consigneeAddress: firstItem.consigneeAddress || "",
@@ -445,7 +608,6 @@ function MainPage() {
       netWeight_confidence: firstItem.netWeight_confidence,
       incoterms: firstItem.incoterms || "",
       incoterms_confidence: firstItem.incoterms_confidence,
-      // Handle both correct and typo versions of invoice number field
       invoiceNumber:
         firstItem.invoiceNumber || (firstItem as any).invoceNumber || "",
       invoiceNumber_confidence:
@@ -455,18 +617,59 @@ function MainPage() {
       invoiceDate_confidence: firstItem.invoiceDate_confidence,
       invoiceValue: firstItem.invoiceValue?.toString() || "0",
       invoiceValue_confidence: firstItem.invoiceValue_confidence,
+      vesselName: firstItem.vesselName || "",
+      vesselName_confidence: firstItem.vesselName_confidence,
+      arrivalDate: firstItem.arrivalDate || "",
+      arrivalDate_confidence: firstItem.arrivalDate_confidence,
     };
 
-    console.log(
-      "convertApiDataToUI - Generated general information:",
-      JSON.stringify(generalInformation, null, 2)
-    );
-
-    // Collect all items from all data entries
     const allItems: DisplayJobCargoItem[] = [];
+    const sealnetItems: SealnetJobCargoItem[] = [];
+
     dataArray.forEach((dataItem, dataIndex) => {
       if (dataItem.items && Array.isArray(dataItem.items)) {
         dataItem.items.forEach((item, itemIndex) => {
+          const statisticalEntries =
+            item.statisticalUOM && Array.isArray(item.statisticalUOM)
+              ? item.statisticalUOM.map((uom) => ({
+                  UOM: uom.UOM,
+                  quantity: uom.quantity,
+                  confidence: uom.confidence,
+                }))
+              : [];
+          const statisticalDetailsDisplay =
+            formatStatisticalDetailsForDisplay(statisticalEntries);
+
+          if (isSealnet) {
+            sealnetItems.push({
+              id: `${dataIndex}-${itemIndex}`,
+              productCode: item.productCode || "",
+              productCode_confidence: item.productCode_confidence,
+              hsCode: item.hsCode || "",
+              hsCode_confidence: item.hsCode_confidence,
+              declaredQty: item.declaredQty,
+              declaredQty_confidence: item.declaredQty_confidence,
+              declaredUOM: item.declaredUOM,
+              declaredUOM_confidence: item.declaredUOM_confidence,
+              statisticalDetails: statisticalDetailsDisplay,
+              statisticalEntries,
+              itemAmount: item.itemAmount,
+              itemAmount_confidence: item.itemAmount_confidence,
+              itemDescription: item.itemDescription,
+              itemDescription_confidence: item.itemDescription_confidence,
+              extraDescription: item.extraDescription,
+              extraDescription_confidence: item.extraDescription_confidence,
+            });
+          }
+
+          const derivedStatisticalQty =
+            item.statisticalQty ??
+            statisticalEntries[0]?.quantity ??
+            item.declaredQty ??
+            0;
+          const derivedStatisticalUOM =
+            statisticalEntries[0]?.UOM || item.declaredUOM || "";
+
           allItems.push({
             id: `${dataIndex}-${itemIndex}`,
             countryOfOrigin: item.countryOfOrigin || "",
@@ -485,22 +688,24 @@ function MainPage() {
             itemDescription2_confidence: item.itemDescription2_confidence,
             itemDescription3: item.itemDescription3 || "",
             itemDescription3_confidence: item.itemDescription3_confidence,
-            statisticalQty: item.statisticalQty || 0,
+            statisticalQty: derivedStatisticalQty || 0,
             statisticalQty_confidence: item.statisticalQty_confidence,
-            statisticalUOM:
-              item.statisticalUOM &&
-              Array.isArray(item.statisticalUOM) &&
-              item.statisticalUOM.length > 0
-                ? item.statisticalUOM.find(
-                    (uom) => uom.quantity === item.statisticalQty
-                  )?.UOM || item.statisticalUOM[0].UOM
-                : item.declaredUOM || "",
+            statisticalUOM: derivedStatisticalUOM,
             statisticalUOM_confidence: item.statisticalQty_confidence,
-            // K9-specific fields
+            productCode: item.productCode || "",
+            productCode_confidence: item.productCode_confidence,
+            extraDescription: item.extraDescription || "",
+            extraDescription_confidence: item.extraDescription_confidence,
+            statisticalDetails: statisticalDetailsDisplay,
+            statisticalDetails_confidence: item.statisticalQty_confidence,
+            statisticalEntries,
+            sourceDataIndex: dataIndex,
+            sourceItemIndex: itemIndex,
             packQtyToBeReleased: item.packQtyToBeReleased,
             packQtyToBeReleased_confidence: item.packQtyToBeReleased_confidence,
             packUOMToBeReleased: item.packUOMToBeReleased,
-            packUOMToBeReleased_confidence: item.packUOMToBeReleased_confidence,
+            packUOMToBeReleased_confidence:
+              item.packUOMToBeReleased_confidence,
           });
         });
       }
@@ -509,6 +714,11 @@ function MainPage() {
     return {
       generalInformation,
       jobCargo: { items: allItems },
+      sealnetData: isSealnet
+        ? { items: sealnetItems, existItems: firstItem?.existItems }
+        : undefined,
+      templateType: isSealnet ? "SEALNET" : "ALDEC",
+      rawData: dataArray,
     };
   };
 
@@ -537,7 +747,10 @@ function MainPage() {
       console.log("Retrieved processed data:", apiData);
 
       // Convert API data to UI format
-      const uiData = convertApiDataToUI(apiData);
+      const uiData = convertApiDataToUI(
+        apiData,
+        selectedTemplateInfo?.template_name
+      );
       console.log("Converted UI data:", uiData);
 
       setExtractedData(uiData);
@@ -586,6 +799,55 @@ function MainPage() {
       );
     } finally {
       setLoadingFormats(false);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      console.log(
+        "Fetching document templates from:",
+        `${API_BASE_URL}/documents/templates`
+      );
+      const data = await fetchDocumentTemplates();
+      const templateList: DocumentTemplate[] = data.templates || data;
+      console.log("Fetched templates:", templateList);
+
+      setTemplates(templateList);
+
+      setSelectedTemplate((previousSelection) => {
+        if (
+          previousSelection &&
+          templateList.some(
+            (template) => template.template_id === previousSelection
+          )
+        ) {
+          return previousSelection;
+        }
+
+        const defaultTemplate = templateList.find(
+          (template) =>
+            template.template_name?.toLowerCase() ===
+            DEFAULT_TEMPLATE_NAME.toLowerCase()
+        );
+
+        return (
+          defaultTemplate?.template_id ||
+          templateList[0]?.template_id ||
+          ""
+        );
+      });
+
+      if (templateList.length === 0) {
+        setMessage("No templates available");
+      }
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      setMessage(
+        "Failed to load templates. Please check your connection and try again."
+      );
+    } finally {
+      setLoadingTemplates(false);
     }
   };
 
@@ -1120,8 +1382,8 @@ function MainPage() {
   };
 
   const handleSubmit = async () => {
-    if (selectedFiles.length < 1 || !outputFormat) {
-      setMessage("Please select files and output format");
+    if (selectedFiles.length < 1 || !outputFormat || !selectedTemplate) {
+      setMessage("Please select files, output format, and template");
       return;
     }
 
@@ -1185,7 +1447,8 @@ function MainPage() {
         upload_session_id,
         outputFormat,
         confirmationFiles,
-        formatValidator
+        formatValidator,
+        selectedTemplate
       );
       console.log("Upload confirmation response:", confirmResponse);
 
@@ -1263,13 +1526,16 @@ function MainPage() {
               <SelectItem value="loading" disabled>
                 Loading formats...
               </SelectItem>
-            ) : outputFormats.length === 0 ? (
+            ) : displayedOutputFormats.length === 0 ? (
               <SelectItem value="no-formats" disabled>
-                No formats available
+                {isSealnetTemplate
+                  ? "Sealnet supports only K1/K2 formats and none are available."
+                  : "No formats available"}
               </SelectItem>
             ) : (
-              outputFormats.map((format) => (
+              displayedOutputFormats.map((format) => (
                 <SelectItem key={format.format_id} value={format.format_id}>
+                  {/* HIGHLIGHT: Displaying the Sealnet-filtered output list */}
                   {format.format_name} ({format.format_extension})
                 </SelectItem>
               ))
@@ -1283,12 +1549,64 @@ function MainPage() {
         type of file you receive after conversion.
       </p>
 
+      {isSealnetTemplate && (
+        <p className="text-amber-600 text-left max-w-lg text-sm">
+          Sealnet templates currently support only K1 and K2 forms.
+        </p>
+      )}
+
+
+      {/* Template selector */}
+      <div className="w-full max-w-lg">
+        <Select
+          value={selectedTemplate}
+          onValueChange={setSelectedTemplate}
+          disabled={loadingTemplates}
+        >
+          <SelectTrigger className="w-full h-12">
+            <SelectValue
+              placeholder={
+                loadingTemplates ? "Loading templates..." : "Select Template"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {loadingTemplates ? (
+              <SelectItem value="loading" disabled>
+                Loading templates...
+              </SelectItem>
+            ) : templates.length === 0 ? (
+              <SelectItem value="no-templates" disabled>
+                No templates available
+              </SelectItem>
+            ) : (
+              templates.map((template) => (
+                <SelectItem
+                  key={template.template_id}
+                  value={template.template_id}
+                >
+                  {template.template_name}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <p className="text-gray-600 text-left max-w-lg text-xs">
+        Templates control how your documents are interpreted. The ALDEC template
+        is selected by default, but you can switch to another template if needed
+        before uploading.
+      </p>
+
       {/* Format Validator Checkbox */}
       <div className="w-full max-w-lg flex items-center space-x-2">
         <Checkbox
           id="format-validator"
           checked={formatValidator}
-          onCheckedChange={(checked) => setFormatValidator(checked === true)}
+          onCheckedChange={(checked: CheckedState) =>
+            setFormatValidator(checked === true)
+          }
         />
         <label
           htmlFor="format-validator"
@@ -1951,6 +2269,9 @@ function MainPage() {
         outputFormat={
           outputFormats.find((f) => f.format_id === outputFormat)
             ?.format_name || outputFormat
+        }
+        templateName={
+          selectedTemplateInfo?.template_name || DEFAULT_TEMPLATE_NAME
         }
       />
     </div>
