@@ -2216,6 +2216,11 @@ function DocumentsPage() {
                                       </td>
                                       <td className="p-4">
                                         <div className="text-sm text-green-900">
+                                          {templateName || "Default"}
+                                        </div>
+                                      </td>
+                                      <td className="p-4">
+                                        <div className="text-sm text-green-900">
                                           {
                                             groupDocuments[0]?.output_format
                                               ?.format_name
@@ -2226,11 +2231,6 @@ function DocumentsPage() {
                                           {groupDocuments[0]?.output_format
                                             ?.format_extension || "Output File"}
                                         </div>
-                                        {templateName && (
-                                          <div className="text-xs text-green-600">
-                                            Template: {templateName}
-                                          </div>
-                                        )}
                                       </td>
                                       <td className="p-4">
                                         <div className="flex gap-2">
