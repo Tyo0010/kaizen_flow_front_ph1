@@ -668,7 +668,11 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
 
   // Determine form type based on output format and template
   const formType = mapOutputFormatToFormType(outputFormat);
-  const resolvedFormType = isSealnetTemplate ? "SEALNET" : formType;
+  const resolvedFormType = isSealnetTemplate
+    ? formType === "K2"
+      ? "SEALNET_K2"
+      : "SEALNET_K1"
+    : formType;
   const [selectedFormType, setSelectedFormType] = useState<string>(() => {
     return resolvedFormType;
   });

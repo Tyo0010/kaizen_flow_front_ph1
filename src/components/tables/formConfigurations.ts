@@ -42,7 +42,19 @@ export const K9_FORM_COLUMNS: JobCargoColumn[] = [
   { key: 'itemDescription3', label: 'Description 3', width: 'min-w-[120px]' },
 ];
 
-export const SEALNET_FORM_COLUMNS: JobCargoColumn[] = [
+export const SEALNET_K1_COLUMNS: JobCargoColumn[] = [
+  { key: 'productCode', label: 'Product Code', width: 'min-w-[100px]' },
+  { key: 'countryOfOrigin', label: 'Country of Origin', width: 'min-w-[80px]' },
+  { key: 'hsCode', label: 'HS Code', width: 'min-w-[80px]' },
+  { key: 'declaredQty', label: 'Declared Qty', width: 'min-w-[60px]', type: 'number' },
+  { key: 'declaredUOM', label: 'Declared UOM', width: 'min-w-[60px]' },
+  { key: 'statisticalDetails', label: 'Statistical UOMs', width: 'min-w-[180px]' },
+  { key: 'itemAmount', label: 'Amount', width: 'min-w-[80px]', type: 'number', step: '0.01' },
+  { key: 'itemDescription', label: 'Item Description', width: 'min-w-[200px]' },
+  { key: 'extraDescription', label: 'Extra Description', width: 'min-w-[200px]' },
+];
+
+export const SEALNET_K2_COLUMNS: JobCargoColumn[] = [
   { key: 'productCode', label: 'Product Code', width: 'min-w-[100px]' },
   { key: 'hsCode', label: 'HS Code', width: 'min-w-[80px]' },
   { key: 'declaredQty', label: 'Declared Qty', width: 'min-w-[60px]', type: 'number' },
@@ -70,10 +82,15 @@ export const FORM_CONFIGURATIONS = {
     columns: K9_FORM_COLUMNS,
     description: 'Advanced customs form with pack quantity fields'
   },
-  'SEALNET': {
-    name: 'Sealnet Template',
-    columns: SEALNET_FORM_COLUMNS,
-    description: 'Sealnet-specific item breakdown with product codes and extra descriptions'
+  'SEALNET_K1': {
+    name: 'Sealnet K1 Template',
+    columns: SEALNET_K1_COLUMNS,
+    description: 'Sealnet K1 item breakdown with country of origin'
+  },
+  'SEALNET_K2': {
+    name: 'Sealnet K2 Template',
+    columns: SEALNET_K2_COLUMNS,
+    description: 'Sealnet K2 item breakdown without country of origin'
   }
 } as const;
 
