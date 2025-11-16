@@ -582,10 +582,10 @@ function DocumentsPage() {
           const statisticalEntries =
             item.statisticalUOM && Array.isArray(item.statisticalUOM)
               ? item.statisticalUOM.map((uom) => ({
-                  UOM: uom.UOM,
-                  quantity: uom.quantity,
-                  confidence: uom.confidence,
-                }))
+                UOM: uom.UOM,
+                quantity: uom.quantity,
+                confidence: uom.confidence,
+              }))
               : [];
           const statisticalDetailsDisplay =
             formatStatisticalDetailsForDisplay(statisticalEntries);
@@ -900,26 +900,26 @@ function DocumentsPage() {
     setExpandedGroups(newExpandedGroups);
   };
 
-const getUniqueFormats = (documents: Document[]) => {
-  // Group documents by base filename first, then get unique formats
-  const baseFilenameGroups = groupDocumentsByBaseFilename(documents);
-  const formats = baseFilenameGroups.map(
-    ([_, groupDocs]) => groupDocs[0].output_format.format_name
-  );
-  return [...new Set(formats)].join(", ");
-};
+  const getUniqueFormats = (documents: Document[]) => {
+    // Group documents by base filename first, then get unique formats
+    const baseFilenameGroups = groupDocumentsByBaseFilename(documents);
+    const formats = baseFilenameGroups.map(
+      ([_, groupDocs]) => groupDocs[0].output_format.format_name
+    );
+    return [...new Set(formats)].join(", ");
+  };
 
-const getUniqueTemplates = (documents: Document[]) => {
-  const templates = documents
-    .map((doc) => getTemplateName(doc))
-    .filter((name): name is string => Boolean(name));
-  return [...new Set(templates)].join(", ");
-};
+  const getUniqueTemplates = (documents: Document[]) => {
+    const templates = documents
+      .map((doc) => getTemplateName(doc))
+      .filter((name): name is string => Boolean(name));
+    return [...new Set(templates)].join(", ");
+  };
 
-const getTemplateName = (doc?: Document | null): string | null => {
-  if (!doc) return null;
-  return (
-    doc.template?.template_name ||
+  const getTemplateName = (doc?: Document | null): string | null => {
+    if (!doc) return null;
+    return (
+      doc.template?.template_name ||
       doc.template_name ||
       null
     );
@@ -1310,44 +1310,40 @@ const getTemplateName = (doc?: Document | null): string | null => {
 
                   {/* Usage Percentage */}
                   <div
-                    className={`p-4 rounded-lg border ${
-                      (usageStats.usage?.usage_percentage || 0) >= 80
+                    className={`p-4 rounded-lg border ${(usageStats.usage?.usage_percentage || 0) >= 80
                         ? "bg-red-50 border-red-200"
                         : (usageStats.usage?.usage_percentage || 0) >= 60
-                        ? "bg-amber-50 border-amber-200"
-                        : "bg-blue-50 border-blue-200"
-                    }`}
+                          ? "bg-amber-50 border-amber-200"
+                          : "bg-blue-50 border-blue-200"
+                      }`}
                   >
                     <div
-                      className={`text-sm font-medium mb-1 ${
-                        (usageStats.usage?.usage_percentage || 0) >= 80
+                      className={`text-sm font-medium mb-1 ${(usageStats.usage?.usage_percentage || 0) >= 80
                           ? "text-red-800"
                           : (usageStats.usage?.usage_percentage || 0) >= 60
-                          ? "text-amber-800"
-                          : "text-blue-800"
-                      }`}
+                            ? "text-amber-800"
+                            : "text-blue-800"
+                        }`}
                     >
                       Usage %
                     </div>
                     <div
-                      className={`text-2xl font-bold ${
-                        (usageStats.usage?.usage_percentage || 0) >= 80
+                      className={`text-2xl font-bold ${(usageStats.usage?.usage_percentage || 0) >= 80
                           ? "text-red-900"
                           : (usageStats.usage?.usage_percentage || 0) >= 60
-                          ? "text-amber-900"
-                          : "text-blue-900"
-                      }`}
+                            ? "text-amber-900"
+                            : "text-blue-900"
+                        }`}
                     >
                       {(usageStats.usage?.usage_percentage || 0).toFixed(1)}%
                     </div>
                     <div
-                      className={`text-xs ${
-                        (usageStats.usage?.usage_percentage || 0) >= 80
+                      className={`text-xs ${(usageStats.usage?.usage_percentage || 0) >= 80
                           ? "text-red-600"
                           : (usageStats.usage?.usage_percentage || 0) >= 60
-                          ? "text-amber-600"
-                          : "text-blue-600"
-                      }`}
+                            ? "text-amber-600"
+                            : "text-blue-600"
+                        }`}
                     >
                       of limit used
                     </div>
@@ -1409,9 +1405,9 @@ const getTemplateName = (doc?: Document | null): string | null => {
           <Alert
             variant={
               message.includes("Error") ||
-              message.includes("Failed") ||
-              message.includes("Network error") ||
-              message.includes("Session expired")
+                message.includes("Failed") ||
+                message.includes("Network error") ||
+                message.includes("Session expired")
                 ? "destructive"
                 : "default"
             }
@@ -1421,15 +1417,15 @@ const getTemplateName = (doc?: Document | null): string | null => {
                 <div className="whitespace-pre-line">{message}</div>
                 {(message.includes("Failed") ||
                   message.includes("Network error")) && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => fetchDocuments()}
-                    className="ml-4"
-                  >
-                    Retry
-                  </Button>
-                )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => fetchDocuments()}
+                      className="ml-4"
+                    >
+                      Retry
+                    </Button>
+                  )}
               </div>
             </AlertDescription>
           </Alert>
@@ -1571,49 +1567,49 @@ const getTemplateName = (doc?: Document | null): string | null => {
               {/* Quick Page Navigation for current tab */}
               {((activeTab === "uploaded" && totalPages > 1) ||
                 (activeTab === "processed" && totalPages > 1)) && (
-                <div className="pt-4 border-t border-gray-200 mt-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium text-gray-700">
-                      Quick Navigation
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(1)}
-                        disabled={
-                          activeTab === "uploaded"
-                            ? currentPage === 1
-                            : currentPage === 1
-                        }
-                      >
-                        First
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const lastPage =
-                            activeTab === "uploaded" ? totalPages : totalPages;
-                          handlePageChange(lastPage);
-                        }}
-                        disabled={
-                          activeTab === "uploaded"
-                            ? currentPage === totalPages
-                            : currentPage === totalPages
-                        }
-                      >
-                        Last
-                      </Button>
-                      <span className="text-sm text-gray-500 ml-2">
-                        {activeTab === "uploaded"
-                          ? `${currentPage}/${totalPages}`
-                          : `${currentPage}/${totalPages}`}
-                      </span>
+                  <div className="pt-4 border-t border-gray-200 mt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-gray-700">
+                        Quick Navigation
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(1)}
+                          disabled={
+                            activeTab === "uploaded"
+                              ? currentPage === 1
+                              : currentPage === 1
+                          }
+                        >
+                          First
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const lastPage =
+                              activeTab === "uploaded" ? totalPages : totalPages;
+                            handlePageChange(lastPage);
+                          }}
+                          disabled={
+                            activeTab === "uploaded"
+                              ? currentPage === totalPages
+                              : currentPage === totalPages
+                          }
+                        >
+                          Last
+                        </Button>
+                        <span className="text-sm text-gray-500 ml-2">
+                          {activeTab === "uploaded"
+                            ? `${currentPage}/${totalPages}`
+                            : `${currentPage}/${totalPages}`}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </CardContent>
         </Card>
@@ -1722,9 +1718,8 @@ const getTemplateName = (doc?: Document | null): string | null => {
                       >
                         <div className="flex items-center gap-3">
                           <svg
-                            className={`w-5 h-5 text-gray-600 transition-transform ${
-                              expandedGroups.has(sessionKey) ? "rotate-90" : ""
-                            }`}
+                            className={`w-5 h-5 text-gray-600 transition-transform ${expandedGroups.has(sessionKey) ? "rotate-90" : ""
+                              }`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -1765,12 +1760,10 @@ const getTemplateName = (doc?: Document | null): string | null => {
                             e.stopPropagation();
                             if (
                               window.confirm(
-                                `Are you sure you want to delete all ${
-                                  groupDocuments.length
-                                } documents from ${
-                                  sessionKey === "no-session"
-                                    ? "individual uploads"
-                                    : `session ${sessionKey}`
+                                `Are you sure you want to delete all ${groupDocuments.length
+                                } documents from ${sessionKey === "no-session"
+                                  ? "individual uploads"
+                                  : `session ${sessionKey}`
                                 }? This action cannot be undone.`
                               )
                             ) {
@@ -2043,22 +2036,17 @@ const getTemplateName = (doc?: Document | null): string | null => {
                                         </div>
                                       </td>
                                       <td className="p-4">
-                                      <div className="text-sm text-green-900">
-                                        {
-                                          groupDocuments[0]?.output_format
-                                            ?.format_name
-                                        }{" "}
-                                        Form
-                                      </div>
-                                      <div className="text-xs text-green-600">
-                                        {groupDocuments[0]?.output_format
-                                          ?.format_extension || "Output File"}
-                                      </div>
-                                      {templateName && (
-                                        <div className="text-xs text-green-600">
-                                          Template: {templateName}
+                                        <div className="text-sm text-green-900">
+                                          {
+                                            groupDocuments[0]?.output_format
+                                              ?.format_name
+                                          }{" "}
+                                          Form
                                         </div>
-                                      )}
+                                        <div className="text-xs text-green-600">
+                                          {groupDocuments[0]?.output_format
+                                            ?.format_extension || "Output File"}
+                                        </div>
                                       </td>
                                       <td className="p-4">
                                         <div className="flex gap-2">
@@ -2098,49 +2086,46 @@ const getTemplateName = (doc?: Document | null): string | null => {
                               } else {
                                 // Show Preview button if no processed files exist and group has session_id
                                 const sessionId = groupDocuments[0]?.session_id;
-                              if (sessionId) {
-                                const isLoading =
-                                  previewLoading.has(sessionId);
-                                const allProcessed =
-                                  areAllDocumentsProcessed(groupDocuments);
-                                const hasFailed =
-                                  hasFailedDocuments(groupDocuments);
-                                const hasCancelled =
-                                  hasCancelledDocuments(groupDocuments);
-                                const templateName = getTemplateName(
-                                  groupDocuments[0]
-                                );
+                                if (sessionId) {
+                                  const isLoading =
+                                    previewLoading.has(sessionId);
+                                  const allProcessed =
+                                    areAllDocumentsProcessed(groupDocuments);
+                                  const hasFailed =
+                                    hasFailedDocuments(groupDocuments);
+                                  const hasCancelled =
+                                    hasCancelledDocuments(groupDocuments);
+                                  const templateName = getTemplateName(
+                                    groupDocuments[0]
+                                  );
 
                                   return (
                                     <tr
                                       key={`group-preview-${sessionId}`}
-                                      className={`hover:bg-blue-50 transition-colors border-l-4 ${
-                                        hasFailed
+                                      className={`hover:bg-blue-50 transition-colors border-l-4 ${hasFailed
                                           ? "bg-red-25 border-red-500"
                                           : hasCancelled
-                                          ? "bg-orange-25 border-orange-500"
-                                          : "bg-blue-25 border-blue-500"
-                                      }`}
+                                            ? "bg-orange-25 border-orange-500"
+                                            : "bg-blue-25 border-blue-500"
+                                        }`}
                                     >
                                       <td className="p-4 pl-8">
                                         <div className="flex items-center gap-3">
                                           <div
-                                            className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br rounded-lg flex items-center justify-center ${
-                                              hasFailed
+                                            className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br rounded-lg flex items-center justify-center ${hasFailed
                                                 ? "from-red-100 to-red-200"
                                                 : hasCancelled
-                                                ? "from-orange-100 to-orange-200"
-                                                : "from-blue-100 to-blue-200"
-                                            }`}
+                                                  ? "from-orange-100 to-orange-200"
+                                                  : "from-blue-100 to-blue-200"
+                                              }`}
                                           >
                                             <svg
-                                              className={`w-4 h-4 ${
-                                                hasFailed
+                                              className={`w-4 h-4 ${hasFailed
                                                   ? "text-red-600"
                                                   : hasCancelled
-                                                  ? "text-orange-600"
-                                                  : "text-blue-600"
-                                              }`}
+                                                    ? "text-orange-600"
+                                                    : "text-blue-600"
+                                                }`}
                                               fill="currentColor"
                                               viewBox="0 0 20 20"
                                             >
@@ -2167,36 +2152,34 @@ const getTemplateName = (doc?: Document | null): string | null => {
                                           </div>
                                           <div>
                                             <div
-                                              className={`font-medium truncate max-w-[400px] mb-1 ${
-                                                hasFailed
+                                              className={`font-medium truncate max-w-[400px] mb-1 ${hasFailed
                                                   ? "text-red-900"
                                                   : hasCancelled
-                                                  ? "text-orange-900"
-                                                  : "text-blue-900"
-                                              }`}
+                                                    ? "text-orange-900"
+                                                    : "text-blue-900"
+                                                }`}
                                             >
                                               {hasFailed
                                                 ? "Processing Failed"
                                                 : hasCancelled
-                                                ? "Processing Cancelled"
-                                                : "Generate Excel Files"}
+                                                  ? "Processing Cancelled"
+                                                  : "Generate Excel Files"}
                                             </div>
                                             <div
-                                              className={`text-xs ${
-                                                hasFailed
+                                              className={`text-xs ${hasFailed
                                                   ? "text-red-600"
                                                   : hasCancelled
-                                                  ? "text-orange-600"
-                                                  : "text-blue-600"
-                                              }`}
+                                                    ? "text-orange-600"
+                                                    : "text-blue-600"
+                                                }`}
                                             >
                                               {hasFailed
                                                 ? "Some documents failed to process • Check individual document status"
                                                 : hasCancelled
-                                                ? "Processing was cancelled by user request"
-                                                : allProcessed
-                                                ? "No processed files found • Click Preview to generate Excel files"
-                                                : "Processing in progress • Please wait for completion"}
+                                                  ? "Processing was cancelled by user request"
+                                                  : allProcessed
+                                                    ? "No processed files found • Click Preview to generate Excel files"
+                                                    : "Processing in progress • Please wait for completion"}
                                             </div>
                                           </div>
                                         </div>
@@ -2207,48 +2190,48 @@ const getTemplateName = (doc?: Document | null): string | null => {
                                             hasFailed
                                               ? "destructive"
                                               : hasCancelled
-                                              ? "secondary"
-                                              : allProcessed
-                                              ? "secondary"
-                                              : "outline"
+                                                ? "secondary"
+                                                : allProcessed
+                                                  ? "secondary"
+                                                  : "outline"
                                           }
                                           className={
                                             hasFailed
                                               ? "bg-red-100 text-red-800 border-red-200"
                                               : hasCancelled
-                                              ? "bg-orange-100 text-orange-800 border-orange-200"
-                                              : allProcessed
-                                              ? "bg-blue-100 text-blue-800 border-blue-200"
-                                              : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                                ? "bg-orange-100 text-orange-800 border-orange-200"
+                                                : allProcessed
+                                                  ? "bg-blue-100 text-blue-800 border-blue-200"
+                                                  : "bg-yellow-100 text-yellow-800 border-yellow-200"
                                           }
                                         >
                                           {hasFailed
                                             ? "Failed"
                                             : hasCancelled
-                                            ? "Cancelled"
-                                            : allProcessed
-                                            ? "Ready to Process"
-                                            : "Processing"}
+                                              ? "Cancelled"
+                                              : allProcessed
+                                                ? "Ready to Process"
+                                                : "Processing"}
                                         </Badge>
                                       </td>
-                                    <td className="p-4">
-                                      <div className="text-sm text-green-900">
-                                        {
-                                          groupDocuments[0]?.output_format
-                                            ?.format_name
-                                        }{" "}
-                                        Form
-                                      </div>
-                                      <div className="text-xs text-green-600">
-                                        {groupDocuments[0]?.output_format
-                                          ?.format_extension || "Output File"}
-                                      </div>
-                                      {templateName && (
-                                        <div className="text-xs text-green-600">
-                                          Template: {templateName}
+                                      <td className="p-4">
+                                        <div className="text-sm text-green-900">
+                                          {
+                                            groupDocuments[0]?.output_format
+                                              ?.format_name
+                                          }{" "}
+                                          Form
                                         </div>
-                                      )}
-                                    </td>
+                                        <div className="text-xs text-green-600">
+                                          {groupDocuments[0]?.output_format
+                                            ?.format_extension || "Output File"}
+                                        </div>
+                                        {templateName && (
+                                          <div className="text-xs text-green-600">
+                                            Template: {templateName}
+                                          </div>
+                                        )}
+                                      </td>
                                       <td className="p-4">
                                         <div className="flex gap-2">
                                           <Button
@@ -2271,23 +2254,22 @@ const getTemplateName = (doc?: Document | null): string | null => {
                                               hasCancelled ||
                                               (!allProcessed && !hasFailed)
                                             }
-                                            className={`inline-flex items-center disabled:opacity-50 ${
-                                              hasFailed
+                                            className={`inline-flex items-center disabled:opacity-50 ${hasFailed
                                                 ? "bg-red-600 hover:bg-red-700"
                                                 : hasCancelled
-                                                ? "bg-gray-400 cursor-not-allowed"
-                                                : allProcessed
-                                                ? "bg-blue-600 hover:bg-blue-700"
-                                                : "bg-gray-400 cursor-not-allowed"
-                                            }`}
+                                                  ? "bg-gray-400 cursor-not-allowed"
+                                                  : allProcessed
+                                                    ? "bg-blue-600 hover:bg-blue-700"
+                                                    : "bg-gray-400 cursor-not-allowed"
+                                              }`}
                                             title={
                                               hasFailed
                                                 ? "Some documents failed to process"
                                                 : hasCancelled
-                                                ? "Processing was cancelled - button disabled"
-                                                : allProcessed
-                                                ? "Generate Excel files for preview"
-                                                : "Please wait for all documents to finish processing"
+                                                  ? "Processing was cancelled - button disabled"
+                                                  : allProcessed
+                                                    ? "Generate Excel files for preview"
+                                                    : "Please wait for all documents to finish processing"
                                             }
                                           >
                                             {isLoading ? (
@@ -2344,12 +2326,12 @@ const getTemplateName = (doc?: Document | null): string | null => {
                                             {isLoading
                                               ? "Opening..."
                                               : hasFailed
-                                              ? "Failed"
-                                              : hasCancelled
-                                              ? "Cancelled"
-                                              : allProcessed
-                                              ? "Preview"
-                                              : "Processing..."}
+                                                ? "Failed"
+                                                : hasCancelled
+                                                  ? "Cancelled"
+                                                  : allProcessed
+                                                    ? "Preview"
+                                                    : "Processing..."}
                                           </Button>
                                         </div>
                                       </td>
@@ -2810,7 +2792,7 @@ const getTemplateName = (doc?: Document | null): string | null => {
         isEditMode={isEditMode}
         setIsEditMode={setIsEditMode}
         uploading={false}
-        setUploading={() => {}}
+        setUploading={() => { }}
         uploadSessionId={currentSessionId}
         sessionStatus={null}
         setMessage={setMessage}
