@@ -292,6 +292,12 @@ const mapOutputFormatToFormType = (outputFormat?: string): string => {
   } else if (formatLower.includes("k2") || formatLower.includes("simplified")) {
     console.log("Matched K2 format");
     return "K2";
+  } else if (formatLower.includes("k3")) {
+    console.log("Matched K3 format");
+    return "K3";
+  } else if (formatLower.includes("k8")) {
+    console.log("Matched K8 format");
+    return "K8";
   } else if (formatLower.includes("k9") || formatLower.includes("advanced")) {
     console.log("Matched K9 format");
     return "K9";
