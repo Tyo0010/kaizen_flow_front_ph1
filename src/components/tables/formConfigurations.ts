@@ -68,17 +68,27 @@ export const SEALNET_K2_COLUMNS: JobCargoColumn[] = [
 // Form configuration mapping
 export const FORM_CONFIGURATIONS = {
   'K1': {
-    name: 'K1 Form',
+    name: 'ALDEC K1 Form',
     columns: K1_FORM_COLUMNS,
     description: 'Standard customs declaration form for Malaysia'
   },
   'K2': {
-    name: 'K2 Form',
+    name: 'ALDEC K2 Form',
     columns: K2_FORM_COLUMNS,
     description: 'Simplified customs form with essential fields'
   },
+  'K3': {
+    name: 'ALDEC K3 Form',
+    columns: K1_FORM_COLUMNS,
+    description: 'Basic customs form without country of origin'
+  },
+  'K8': {
+    name: 'ALDEC K8 Form',
+    columns: K1_FORM_COLUMNS,
+    description: 'Compact customs form for low-value items'
+  },
   'K9': {
-    name: 'K9 Form',
+    name: 'ALDEC K9 Form',
     columns: K9_FORM_COLUMNS,
     description: 'Advanced customs form with pack quantity fields'
   },
