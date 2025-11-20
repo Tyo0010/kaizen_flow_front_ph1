@@ -653,8 +653,8 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const derivedTemplateType = React.useMemo<"ALDEC" | "SEALNET">(() => {
-    if (templateName?.toLowerCase() === "sealnet") {
-      return "SEALNET";
+    if (templateName) {
+      return templateName.toLowerCase() === "sealnet" ? "SEALNET" : "ALDEC";
     }
     if (extractedData?.templateType === "SEALNET") {
       return "SEALNET";
