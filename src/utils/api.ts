@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = 'https://hk3gfh3zy5.execute-api.ap-southeast-5.amazonaws.com/main/api'
+export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
 
 // ========================================
 // RETRY LOGIC CONFIGURATION
