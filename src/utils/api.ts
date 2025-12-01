@@ -181,9 +181,51 @@ export const checkUsageLimit = async (pages: number) => {
 }
 
 // Get current company's usage stats and subscription limits
-export const getUsageStats = async () => {
+export interface TokenUsageResponse {
+    token_usage: {
+        company_id: string
+        current_month_tokens: number
+        current_month_credits: number
+        total_tokens_consumed: number
+        total_credits_consumed: number
+        monthly_token_limit: number | null
+        monthly_credit_limit: number | null
+        remaining_tokens: number | null
+        remaining_credits: number | null
+        is_over_limit: boolean
+    }
+}
+
+export interface SessionTokenUsageResponse {
+    session_id: string
+    session_status: string
+    token_usage: {
+        session_id: string
+        total_prompt_tokens: number
+        total_completion_tokens: number
+        total_tokens: number
+        total_credits_consumed: number
+        event_count: number
+        models_used: string[]
+        providers_used: string[]
+    }
+}
+
+export const getUsageStats = async (): Promise<TokenUsageResponse> => {
     return withRetry(async () => {
         const response = await fetch(`${API_BASE_URL}/documents/usage`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        })
+        
+        return handleApiResponse(response)
+    })
+}
+
+export const getSessionTokenUsage = async (sessionId: string): Promise<SessionTokenUsageResponse> => {
+    return withRetry(async () => {
+        const safeSessionId = encodeURIComponent(sessionId)
+        const response = await fetch(`${API_BASE_URL}/documents/session/${safeSessionId}/audit-usage`, {
             method: 'GET',
             headers: getAuthHeaders()
         })

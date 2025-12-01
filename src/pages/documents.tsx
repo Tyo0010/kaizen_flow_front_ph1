@@ -6,6 +6,9 @@ import {
   getUsageStats,
   getSessionProcessedData,
   getDocumentsV2,
+  type TokenUsageResponse,
+  getSessionTokenUsage,
+  type SessionTokenUsageResponse,
 } from "../utils/api";
 import { Button } from "../components/ui/button";
 import {
@@ -381,8 +384,22 @@ function DocumentsPage() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Usage statistics state
-  const [usageStats, setUsageStats] = useState<any>(null);
+  const [usageStats, setUsageStats] = useState<TokenUsageResponse | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
+
+  // Session token usage state
+  const [sessionUsageData, setSessionUsageData] = useState<
+    Record<string, SessionTokenUsageResponse>
+  >({});
+  const [sessionUsageLoading, setSessionUsageLoading] = useState<Set<string>>(
+    new Set()
+  );
+  const [sessionUsageErrors, setSessionUsageErrors] = useState<
+    Record<string, string>
+  >({});
+  const [sessionUsageVisible, setSessionUsageVisible] = useState<Set<string>>(
+    new Set()
+  );
 
   // Preview loading state
   const [previewLoading, setPreviewLoading] = useState<Set<string>>(new Set());
@@ -802,17 +819,50 @@ function DocumentsPage() {
   const fetchUsageStatistics = async () => {
     setUsageLoading(true);
     try {
-      // TODO: Uncomment when backend endpoint /documents/usage is implemented
       const data = await getUsageStats();
       setUsageStats(data);
-
-      // Temporary: Set loading to false without making the API call
-      console.log("Usage statistics endpoint not yet implemented on backend");
     } catch (error: any) {
       console.error("Error fetching usage statistics:", error);
       // Don't show error message for usage stats as it's not critical
     } finally {
       setUsageLoading(false);
+    }
+  };
+
+  const fetchSessionTokenUsage = async (
+    sessionId: string
+  ): Promise<SessionTokenUsageResponse | undefined> => {
+    if (!sessionId) return;
+
+    setSessionUsageLoading((prev) => new Set(prev).add(sessionId));
+    setSessionUsageErrors((prev) => {
+      const { [sessionId]: _, ...rest } = prev;
+      return rest;
+    });
+
+    try {
+      const usage = await getSessionTokenUsage(sessionId);
+      setSessionUsageData((prev) => ({
+        ...prev,
+        [sessionId]: usage,
+      }));
+      return usage;
+    } catch (error: any) {
+      console.error("Error fetching session token usage:", error);
+      const friendly =
+        error?.message ||
+        "Usage data is currently unavailable for this session.";
+      setSessionUsageErrors((prev) => ({
+        ...prev,
+        [sessionId]: friendly,
+      }));
+      setMessage(friendly);
+    } finally {
+      setSessionUsageLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(sessionId);
+        return next;
+      });
     }
   };
 
@@ -1278,11 +1328,10 @@ function DocumentsPage() {
                       Current Usage
                     </div>
                     <div className="text-2xl font-bold text-blue-900">
-                      {usageStats.usage?.current_month_usage?.toLocaleString() ||
-                        0}
+                      {usageStats.token_usage.current_month_credits?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 0}
                     </div>
                     <div className="text-xs text-blue-600">
-                      pages this month
+                      credits this month
                     </div>
                   </div>
 
@@ -1292,106 +1341,100 @@ function DocumentsPage() {
                       Monthly Limit
                     </div>
                     <div className="text-2xl font-bold text-gray-900">
-                      {usageStats.usage?.monthly_limit?.toLocaleString() || 0}
+                      {usageStats.token_usage.monthly_credit_limit 
+                        ? usageStats.token_usage.monthly_credit_limit.toLocaleString() 
+                        : "Unlimited"}
                     </div>
-                    <div className="text-xs text-gray-600">pages allowed</div>
+                    <div className="text-xs text-gray-600">credits allowed</div>
                   </div>
 
-                  {/* Remaining Pages */}
+                  {/* Remaining Credits */}
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <div className="text-sm font-medium text-green-800 mb-1">
                       Remaining
                     </div>
                     <div className="text-2xl font-bold text-green-900">
-                      {usageStats.usage?.remaining_pages?.toLocaleString() || 0}
+                      {usageStats.token_usage.remaining_credits !== null
+                        ? usageStats.token_usage.remaining_credits?.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                        : "Unlimited"}
                     </div>
-                    <div className="text-xs text-green-600">pages left</div>
+                    <div className="text-xs text-green-600">credits left</div>
                   </div>
 
                   {/* Usage Percentage */}
-                  <div
-                    className={`p-4 rounded-lg border ${(usageStats.usage?.usage_percentage || 0) >= 80
-                        ? "bg-red-50 border-red-200"
-                        : (usageStats.usage?.usage_percentage || 0) >= 60
-                          ? "bg-amber-50 border-amber-200"
-                          : "bg-blue-50 border-blue-200"
-                      }`}
-                  >
-                    <div
-                      className={`text-sm font-medium mb-1 ${(usageStats.usage?.usage_percentage || 0) >= 80
-                          ? "text-red-800"
-                          : (usageStats.usage?.usage_percentage || 0) >= 60
-                            ? "text-amber-800"
-                            : "text-blue-800"
+                  {(() => {
+                    const percentage = usageStats.token_usage.monthly_credit_limit
+                      ? (usageStats.token_usage.current_month_credits / usageStats.token_usage.monthly_credit_limit) * 100
+                      : 0;
+                    
+                    const isUnlimited = usageStats.token_usage.monthly_credit_limit === null;
+                    
+                    return (
+                      <div
+                        className={`p-4 rounded-lg border ${
+                          isUnlimited 
+                            ? "bg-blue-50 border-blue-200"
+                            : percentage >= 80
+                            ? "bg-red-50 border-red-200"
+                            : percentage >= 60
+                            ? "bg-amber-50 border-amber-200"
+                            : "bg-blue-50 border-blue-200"
                         }`}
-                    >
-                      Usage %
-                    </div>
-                    <div
-                      className={`text-2xl font-bold ${(usageStats.usage?.usage_percentage || 0) >= 80
-                          ? "text-red-900"
-                          : (usageStats.usage?.usage_percentage || 0) >= 60
-                            ? "text-amber-900"
-                            : "text-blue-900"
-                        }`}
-                    >
-                      {(usageStats.usage?.usage_percentage || 0).toFixed(1)}%
-                    </div>
-                    <div
-                      className={`text-xs ${(usageStats.usage?.usage_percentage || 0) >= 80
-                          ? "text-red-600"
-                          : (usageStats.usage?.usage_percentage || 0) >= 60
-                            ? "text-amber-600"
-                            : "text-blue-600"
-                        }`}
-                    >
-                      of limit used
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status Indicators */}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Badge
-                    variant={
-                      usageStats.status?.can_upload ? "default" : "destructive"
-                    }
-                  >
-                    {usageStats.status?.can_upload
-                      ? "✓ Can Upload"
-                      : "✗ Upload Blocked"}
-                  </Badge>
-
-                  {usageStats.status?.approaching_limit && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-amber-100 text-amber-800 border-amber-200"
-                    >
-                      ⚠️ Approaching Limit
-                    </Badge>
-                  )}
-
-                  {usageStats.status?.is_over_limit && (
-                    <Badge variant="destructive">🚫 Over Limit</Badge>
-                  )}
-
-                  <Badge variant="outline">
-                    Tier: {usageStats.usage?.subscription_tier || "Unknown"}
-                  </Badge>
+                      >
+                        <div
+                          className={`text-sm font-medium mb-1 ${
+                            isUnlimited
+                              ? "text-blue-800"
+                              : percentage >= 80
+                              ? "text-red-800"
+                              : percentage >= 60
+                              ? "text-amber-800"
+                              : "text-blue-800"
+                          }`}
+                        >
+                          Usage %
+                        </div>
+                        <div
+                          className={`text-2xl font-bold ${
+                            isUnlimited
+                              ? "text-blue-900"
+                              : percentage >= 80
+                              ? "text-red-900"
+                              : percentage >= 60
+                              ? "text-amber-900"
+                              : "text-blue-900"
+                          }`}
+                        >
+                          {isUnlimited ? "N/A" : `${percentage.toFixed(1)}%`}
+                        </div>
+                        <div
+                          className={`text-xs ${
+                            isUnlimited
+                              ? "text-blue-600"
+                              : percentage >= 80
+                              ? "text-red-600"
+                              : percentage >= 60
+                              ? "text-amber-600"
+                              : "text-blue-600"
+                          }`}
+                        >
+                          of limit used
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Additional Info */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="text-sm text-gray-600">
+                <div className="mt-2 pt-4 border-t border-gray-200">
+                  <div className="text-sm text-gray-600 flex flex-col gap-2">
                     <div>
                       Total lifetime usage:{" "}
-                      {usageStats.usage?.total_lifetime_usage?.toLocaleString() ||
-                        0}{" "}
-                      pages
+                      <span className="font-medium">{usageStats.token_usage.total_credits_consumed.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>{" "}
+                      credits
                     </div>
                     <div>
-                      Current month:{" "}
-                      {usageStats.usage?.current_month || "Unknown"}
+                      Normalization factor: /2
                     </div>
                   </div>
                 </div>
@@ -1705,11 +1748,22 @@ function DocumentsPage() {
             // Uploaded Documents View
             <div className="divide-y divide-gray-200">
               {groupDocumentsBySession(documents).map(
-                ([sessionKey, groupDocuments]) => (
-                  <div
-                    key={sessionKey}
-                    className="border-b border-gray-100 last:border-b-0"
-                  >
+                ([sessionKey, groupDocuments]) => {
+                  const sessionUsage = sessionUsageData[sessionKey];
+                  const isUsageLoading =
+                    sessionUsageLoading.has(sessionKey);
+                  const isGroupCompleted =
+                    areAllDocumentsProcessed(groupDocuments);
+                  const canFetchUsage =
+                    sessionKey !== "no-session" && isGroupCompleted;
+                  const sessionUsageError = sessionUsageErrors[sessionKey];
+                  const isUsageVisible = sessionUsageVisible.has(sessionKey);
+
+                  return (
+                    <div
+                      key={sessionKey}
+                      className="border-b border-gray-100 last:border-b-0"
+                    >
                     {/* Group Header */}
                     <div className="p-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between">
                       <div
@@ -1753,6 +1807,96 @@ function DocumentsPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                         <span>Formats: {getUniqueTemplates(groupDocuments)} {getUniqueFormats(groupDocuments)}</span>
+                        {sessionKey !== "no-session" && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!canFetchUsage || isUsageLoading) return;
+
+                                if (isUsageVisible) {
+                                  setSessionUsageVisible((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(sessionKey);
+                                    return next;
+                                  });
+                                  return;
+                                }
+
+                                // If we already have data, just show it
+                                if (sessionUsage) {
+                                  setSessionUsageVisible((prev) => {
+                                    const next = new Set(prev);
+                                    next.add(sessionKey);
+                                    return next;
+                                  });
+                                  return;
+                                }
+
+                                const usage = await fetchSessionTokenUsage(
+                                  sessionKey
+                                );
+                                if (usage) {
+                                  setSessionUsageVisible((prev) => {
+                                    const next = new Set(prev);
+                                    next.add(sessionKey);
+                                    return next;
+                                  });
+                                }
+                              }}
+                              disabled={isUsageLoading || !canFetchUsage}
+                              className="inline-flex items-center"
+                            >
+                              {isUsageLoading ? (
+                                <div className="animate-spin w-4 h-4 mr-2 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                              ) : (
+                                <svg
+                                  className="w-4 h-4 mr-2"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8c-1.657 0-3 1.567-3 3.5S10.343 15 12 15s3-1.567 3-3.5S13.657 8 12 8z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 4v1m0 14v1m8-8h-1M5 12H4m13.657-5.657l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707M17.657 17.657l.707.707"
+                                  />
+                                </svg>
+                              )}
+                              {isUsageVisible ? "Hide usage" : "Token usage"}
+                            </Button>
+                            {sessionUsage && isUsageVisible && (
+                              <span className="text-xs text-gray-600">
+                                Tokens:{" "}
+                                {sessionUsage.token_usage.total_tokens.toLocaleString()}{" "}
+                                • Credits:{" "}
+                                {sessionUsage.token_usage.total_credits_consumed.toLocaleString(
+                                  undefined,
+                                  { maximumFractionDigits: 4 }
+                                )}
+                              </span>
+                            )}
+                            {sessionUsageError && (
+                              <span className="text-xs text-red-600">
+                                {sessionUsageError}
+                              </span>
+                            )}
+                            {!sessionUsage && !canFetchUsage && (
+                              <span className="text-xs text-gray-500">
+                                Usage available after processing completes
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <Button
                           variant="destructive"
                           size="sm"
@@ -2346,8 +2490,8 @@ function DocumentsPage() {
                       </div>
                     )}
                   </div>
-                )
-              )}
+                );
+              })}
             </div>
           ) : (
             // Processed Documents View
