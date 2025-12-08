@@ -1,13 +1,15 @@
 import React from 'react';
 import JobCargoTable, { type JobCargoTableProps } from './JobCargoTable';
-import { 
-  getColumnsByFormType, 
-  getFormName
+import {
+  getColumnsByFormType,
+  getFormName,
+  type FormType,
 } from './formConfigurations';
 
-interface DynamicJobCargoTableProps extends Omit<JobCargoTableProps, 'columns'> {
-  selectedFormType: string;
-  onFormTypeChange: (formType: string) => void;
+interface DynamicJobCargoTableProps
+  extends Omit<JobCargoTableProps, 'columns'> {
+  selectedFormType: FormType;
+  onFormTypeChange: (formType: FormType) => void;
   showFormSelector?: boolean;
 }
 

@@ -407,21 +407,10 @@ function MainPage() {
       return [];
     }
 
-    // === HIGHLIGHT: Sort + filter output formats (SEALNET enforces K1/K2) ===
-    const sortedFormats = [...outputFormats].sort((a, b) =>
+    return [...outputFormats].sort((a, b) =>
       a.format_name.localeCompare(b.format_name)
     );
-
-    if (!isSealnetTemplate) {
-      return sortedFormats;
-    }
-
-    return sortedFormats.filter((format) => {
-      const lowerName = format.format_name?.toLowerCase() || "";
-      return lowerName.includes("k1") || lowerName.includes("k2");
-    });
-    // === END HIGHLIGHT ===
-  }, [outputFormats, isSealnetTemplate]);
+  }, [outputFormats]);
 
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false);
@@ -1528,14 +1517,11 @@ const convertApiDataToUI = (
               </SelectItem>
             ) : displayedOutputFormats.length === 0 ? (
               <SelectItem value="no-formats" disabled>
-                {isSealnetTemplate
-                  ? "Sealnet supports only K1/K2 formats and none are available."
-                  : "No formats available"}
+                No formats available
               </SelectItem>
             ) : (
               displayedOutputFormats.map((format) => (
                 <SelectItem key={format.format_id} value={format.format_id}>
-                  {/* HIGHLIGHT: Displaying the Sealnet-filtered output list */}
                   {format.format_name} ({format.format_extension})
                 </SelectItem>
               ))
@@ -1548,13 +1534,6 @@ const convertApiDataToUI = (
         Choose the desired output format for your files. This will determine the
         type of file you receive after conversion.
       </p>
-
-      {isSealnetTemplate && (
-        <p className="text-amber-600 text-left max-w-lg text-sm">
-          Sealnet templates currently support only K1 and K2 forms.
-        </p>
-      )}
-
 
       {/* Template selector */}
       <div className="w-full max-w-lg">

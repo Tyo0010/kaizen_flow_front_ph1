@@ -34,8 +34,8 @@ export const K9_FORM_COLUMNS: JobCargoColumn[] = [
   { key: 'statisticalUOM', label: 'Stat UOM', width: 'min-w-[40px]' },
   { key: 'declaredQty', label: 'Decl Qty', width: 'min-w-[50px]', type: 'number' },
   { key: 'declaredUOM', label: 'Decl UOM', width: 'min-w-[40px]' },
-  { key: 'packQtyToBeReleased', label: 'Pack Qty to be Released', width: 'min-w-[60px]', type: 'number' },
-  { key: 'packUOMToBeReleased', label: 'Pack UOM to be Released', width: 'min-w-[40px]' },
+  { key: 'packQtyToBeReleased', label: 'Pack Qty', width: 'min-w-[60px]', type: 'number' },
+  { key: 'packUOMToBeReleased', label: 'Pack UOM', width: 'min-w-[40px]' },
   { key: 'itemAmount', label: 'Amount', width: 'min-w-[60px]', type: 'number', step: '0.01' },
   { key: 'itemDescription', label: 'Desc 1', width: 'min-w-[40px]' },
   { key: 'itemDescription2', label: 'Desc 2', width: 'min-w-[40px]' },
@@ -61,6 +61,44 @@ export const SEALNET_K2_COLUMNS: JobCargoColumn[] = [
   { key: 'declaredUOM', label: 'Declared UOM', width: 'min-w-[60px]' },
   { key: 'statisticalDetails', label: 'Statistical UOMs', width: 'min-w-[180px]' },
   { key: 'itemAmount', label: 'Amount', width: 'min-w-[80px]', type: 'number', step: '0.01' },
+  { key: 'itemDescription', label: 'Item Description', width: 'min-w-[200px]' },
+  { key: 'extraDescription', label: 'Extra Description', width: 'min-w-[200px]' },
+];
+
+export const SEALNET_K3_COLUMNS: JobCargoColumn[] = [
+  { key: 'productCode', label: 'Product Code', width: 'min-w-[100px]' },
+  { key: 'countryOfOrigin', label: 'Country of Origin', width: 'min-w-[80px]' },
+  { key: 'hsCode', label: 'HS Code', width: 'min-w-[80px]' },
+  { key: 'declaredQty', label: 'Declared Qty', width: 'min-w-[60px]', type: 'number' },
+  { key: 'declaredUOM', label: 'Declared UOM', width: 'min-w-[60px]' },
+  { key: 'statisticalDetails', label: 'Statistical UOMs', width: 'min-w-[180px]' },
+  { key: 'itemAmount', label: 'Amount', width: 'min-w-[80px]', type: 'number', step: '0.01' },
+  { key: 'itemDescription', label: 'Item Description', width: 'min-w-[200px]' },
+];
+
+export const SEALNET_K8_COLUMNS: JobCargoColumn[] = [
+  { key: 'productCode', label: 'Product Code', width: 'min-w-[100px]' },
+  { key: 'countryOfOrigin', label: 'Country of Origin', width: 'min-w-[80px]' },
+  { key: 'hsCode', label: 'HS Code', width: 'min-w-[80px]' },
+  { key: 'declaredQty', label: 'Declared Qty', width: 'min-w-[60px]', type: 'number' },
+  { key: 'declaredUOM', label: 'Declared UOM', width: 'min-w-[60px]' },
+  { key: 'statisticalDetails', label: 'Statistical UOMs', width: 'min-w-[180px]' },
+  { key: 'itemAmount', label: 'Amount', width: 'min-w-[80px]', type: 'number', step: '0.01' },
+  { key: 'itemDescription', label: 'Item Description', width: 'min-w-[200px]' },
+  { key: 'extraDescription', label: 'Extra Description', width: 'min-w-[200px]' },
+];
+
+export const SEALNET_K9_COLUMNS: JobCargoColumn[] = [
+  { key: 'productCode', label: 'Product Code', width: 'min-w-[100px]' },
+  { key: 'countryOfOrigin', label: 'Country', width: 'min-w-[50px]' },
+  { key: 'hsCode', label: 'HS Code', width: 'min-w-[80px]' },
+  { key: 'statisticalQty', label: 'Stat Qty', width: 'min-w-[50px]', type: 'number' },
+  { key: 'statisticalUOM', label: 'Stat UOM', width: 'min-w-[40px]' },
+  { key: 'declaredQty', label: 'Decl Qty', width: 'min-w-[50px]', type: 'number' },
+  { key: 'declaredUOM', label: 'Decl UOM', width: 'min-w-[40px]' },
+  { key: 'packQtyToBeReleased', label: 'Pack Qty', width: 'min-w-[60px]', type: 'number' },
+  { key: 'packUOMToBeReleased', label: 'Pack UOM', width: 'min-w-[40px]' },
+  { key: 'itemAmount', label: 'Amount', width: 'min-w-[60px]', type: 'number', step: '0.01' },
   { key: 'itemDescription', label: 'Item Description', width: 'min-w-[200px]' },
   { key: 'extraDescription', label: 'Extra Description', width: 'min-w-[200px]' },
 ];
@@ -101,7 +139,22 @@ export const FORM_CONFIGURATIONS = {
     name: 'Sealnet K2 Template',
     columns: SEALNET_K2_COLUMNS,
     description: 'Sealnet K2 item breakdown without country of origin'
-  }
+  },
+  'SEALNET_K3': {
+    name: 'Sealnet K3 Template',
+    columns: SEALNET_K3_COLUMNS,
+    description: 'Sealnet K3 item breakdown with country of origin'
+  },
+  'SEALNET_K8': {
+    name: 'Sealnet K8 Template',
+    columns: SEALNET_K8_COLUMNS,
+    description: 'Sealnet K8 item breakdown with extra description'
+  },
+  'SEALNET_K9': {
+    name: 'Sealnet K9 Template',
+    columns: SEALNET_K9_COLUMNS,
+    description: 'Sealnet K9 item breakdown with pack quantity fields'
+  },
 } as const;
 
 export type FormType = keyof typeof FORM_CONFIGURATIONS;

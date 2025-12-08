@@ -13,7 +13,11 @@ import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
 import { updateProcessedData, generateExcelFiles } from "../utils/api";
 import { useNavigate, useLocation } from "react-router-dom";
-import { DynamicJobCargoTable, type DisplayJobCargoItem } from "./tables";
+import {
+  DynamicJobCargoTable,
+  type DisplayJobCargoItem,
+  type FormType,
+} from "./tables";
 
 // Interfaces
 interface StatisticalUOM {
@@ -268,55 +272,68 @@ const parseStatisticalDetailsString = (value: string): StatisticalUOM[] => {
     });
 };
 
-// Map output format names to form types
-const mapOutputFormatToFormType = (outputFormat?: string): string => {
-  console.log("mapOutputFormatToFormType called with:", outputFormat);
+type BaseFormType = "K1" | "K2" | "K3" | "K8" | "K9";
+
+// Map output format names to form types (ALDEC + Sealnet)
+const mapOutputFormatToFormType = (
+  outputFormat?: string,
+  templateType: "ALDEC" | "SEALNET" = "ALDEC"
+): FormType => {
+  console.log("mapOutputFormatToFormType called with:", {
+    outputFormat,
+    templateType,
+  });
 
   if (!outputFormat) {
-    console.log("No output format provided, defaulting to K1");
-    return "K1"; // Default to K1
+    const fallback = templateType === "SEALNET" ? "SEALNET_K1" : "K1";
+    console.log("No output format provided, defaulting to", fallback);
+    return fallback;
   }
 
   const formatLower = outputFormat.toLowerCase();
-  console.log("Format lowercase:", formatLower);
+  const isSealnetFormat =
+    templateType === "SEALNET" || formatLower.includes("sealnet");
 
-  // Map common output format names to form types
-  // You can customize these mappings based on your actual output format names
-  if (
-    formatLower.includes("k1") ||
-    formatLower.includes("malaysia") ||
-    formatLower.includes("customs")
-  ) {
-    console.log("Matched K1 format");
-    return "K1";
-  } else if (formatLower.includes("k2") || formatLower.includes("simplified")) {
-    console.log("Matched K2 format");
-    return "K2";
-  } else if (formatLower.includes("k3")) {
-    console.log("Matched K3 format");
-    return "K3";
-  } else if (formatLower.includes("k8")) {
-    console.log("Matched K8 format");
-    return "K8";
-  } else if (formatLower.includes("k9") || formatLower.includes("advanced")) {
-    console.log("Matched K9 format");
-    return "K9";
-  }
-  // You can add more specific mappings based on your actual format names:
-  // Example: if your formats are named like "Malaysia K1 Export Form", "Commercial Invoice Template", etc.
-  switch (formatLower) {
-    case "malaysia k1 export form":
-    case "k1 export declaration":
-      console.log("Matched specific K1 format");
-      return "K1";
-    case "k2 simplified form":
-    case "simplified customs declaration":
-      console.log("Matched specific K2 format");
+  const detectBaseForm = (): BaseFormType => {
+    if (formatLower.includes("k9") || formatLower.includes("advanced")) {
+      console.log("Matched base K9 format");
+      return "K9";
+    }
+    if (formatLower.includes("k8")) {
+      console.log("Matched base K8 format");
+      return "K8";
+    }
+    if (formatLower.includes("k3")) {
+      console.log("Matched base K3 format");
+      return "K3";
+    }
+    if (formatLower.includes("k2") || formatLower.includes("simplified")) {
+      console.log("Matched base K2 format");
       return "K2";
-    default:
-      console.log("No specific match found, defaulting to K1");
-      return "K1"; // Default fallback
+    }
+    if (
+      formatLower.includes("k1") ||
+      formatLower.includes("malaysia") ||
+      formatLower.includes("customs")
+    ) {
+      console.log("Matched base K1 format");
+      return "K1";
+    }
+
+    console.log("No specific match found, defaulting to base K1");
+    return "K1";
+  };
+
+  const baseForm = detectBaseForm();
+
+  if (isSealnetFormat) {
+    const sealnetForm = `SEALNET_${baseForm}` as FormType;
+    console.log("Using Sealnet form type:", sealnetForm);
+    return sealnetForm;
   }
+
+  console.log("Using ALDEC form type:", baseForm);
+  return baseForm;
 };
 
 // Convert UI data back to API format for updates
@@ -673,22 +690,17 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
   const isSealnetTemplate = derivedTemplateType === "SEALNET";
 
   // Determine form type based on output format and template
-  const formType = mapOutputFormatToFormType(outputFormat);
-  const resolvedFormType = isSealnetTemplate
-    ? formType === "K2"
-      ? "SEALNET_K2"
-      : "SEALNET_K1"
-    : formType;
-  const [selectedFormType, setSelectedFormType] = useState<string>(() => {
-    return resolvedFormType;
+  const formType = mapOutputFormatToFormType(outputFormat, derivedTemplateType);
+  const [selectedFormType, setSelectedFormType] = useState<FormType>(() => {
+    return formType;
   });
 
   // Force sync state with computed form type
   React.useEffect(() => {
-    if (resolvedFormType !== selectedFormType) {
-      setSelectedFormType(resolvedFormType);
+    if (formType !== selectedFormType) {
+      setSelectedFormType(formType);
     }
-  }, [resolvedFormType, selectedFormType]);
+  }, [formType, selectedFormType]);
 
   // Clear error when modal opens/closes and validate data
   React.useEffect(() => {
