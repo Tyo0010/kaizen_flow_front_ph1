@@ -501,6 +501,7 @@ export const getDocumentsV2 = async (params?: {
     status?: string
     format_id?: string
     session_id?: string
+    session_search?: string
     group_by_session?: boolean
     include_processed_files?: boolean
     include_sessions?: boolean
@@ -519,6 +520,7 @@ export const getDocumentsV2 = async (params?: {
     if (params?.status) queryParams.append('status', params.status)
     if (params?.format_id) queryParams.append('format_id', params.format_id)
     if (params?.session_id) queryParams.append('session_id', params.session_id)
+    if (params?.session_search) queryParams.append('session_search', params.session_search)
     
     // Add boolean parameters only if they are explicitly true
     if (params?.group_by_session) queryParams.append('group_by_session', 'true')

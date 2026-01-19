@@ -1310,7 +1310,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
 
                       <div className="space-y-1">
                         <Label htmlFor="invoiceDate" className="text-sm">
-                          Date
+                          Invoice Date
                         </Label>
                         {isEditMode ? (
                           <Input
