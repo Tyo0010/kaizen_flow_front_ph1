@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = 'https://hk3gfh3zy5.execute-api.ap-southeast-5.amazonaws.com/main/api'
+export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
 
 // ========================================
 // RETRY LOGIC CONFIGURATION
@@ -548,17 +548,19 @@ export const requestPresignedUrls = async (files: Array<{
     filename: string
     content_type: string
     size: number
-}>, formatId: string) => {
+}>, formatId: string, customTransformations?: any[]) => {
     return withRetry(async () => {
         console.log('Requesting presigned URLs for files:', files)
         console.log('Format ID:', formatId)
+        console.log('Custom Transformations:', customTransformations)
         
         const response = await fetch(`${API_BASE_URL}/documents/presigned-upload`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({
                 files,
-                format_id: formatId
+                format_id: formatId,
+                custom_transformations: customTransformations
             })
         })
         
@@ -613,12 +615,13 @@ export const confirmUpload = async (uploadSessionId: string, formatId: string, f
     s3_key: string
     filename: string
     size: number
-}>, formatValidator: boolean = true, templateId: string) => {
+}>, formatValidator: boolean = true, templateId: string, customTransformations?: any[]) => {
     return withRetry(async () => {
         console.log('Confirming upload for session:', uploadSessionId)
         console.log('Files to confirm:', files)
         console.log('Format validator enabled:', formatValidator)
         console.log('Template ID:', templateId)
+        console.log('Custom Transformations:', customTransformations)
         
         const response = await fetch(`${API_BASE_URL}/documents/upload-confirm`, {
             method: 'POST',
@@ -628,7 +631,8 @@ export const confirmUpload = async (uploadSessionId: string, formatId: string, f
                 format_id: formatId,
                 files,
                 format_validator: formatValidator,
-                template_id: templateId
+                template_id: templateId,
+                custom_transformations: customTransformations
             })
         })
         
@@ -679,6 +683,7 @@ export const updateCompany = async (companyId: string, companyData: {
     company_phone?: string
     company_email?: string
     tax_id?: string
+    customizations?: any[]
 }) => {
     const response = await fetch(`${API_BASE_URL}/super_admin/companies/${companyId}`, {
         method: 'PUT',

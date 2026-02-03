@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import NumberCode from '../components/numberCode';
+import { CustomizationModal, type CompanyCustomization } from '../components/TransformationModal';
+import { Trash2, Edit, Plus } from 'lucide-react';
 import { 
     // Admin API functions
     fetchCompanies as apiFetchCompanies,
@@ -53,6 +55,7 @@ interface Company {
     company_phone: string;
     company_email: string;
     tax_id: string;
+    customizations?: CompanyCustomization[];
 }
 
 interface UserData {
@@ -90,6 +93,10 @@ function AdminPanel({ setUser }: AdminPanelProps) {
     const [message, setMessage] = useState('')
     const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
     const [generatePassword, setGeneratePassword] = useState(false);
+    
+    // Customization state
+    const [isCustomizationModalOpen, setIsCustomizationModalOpen] = useState(false);
+    const [editingCustomization, setEditingCustomization] = useState<CompanyCustomization | null>(null);
 
     const handleLogout = async () => {
         // Clear stored tokens and user data
@@ -108,12 +115,49 @@ function AdminPanel({ setUser }: AdminPanelProps) {
         setLoading(true);
         try {
             const data = await apiFetchCompanies();
-            setCompanies(data.companies || []);
+            // Ensure customizations is at least an empty array if missing
+            const processedData = (data.companies || []).map((c: any) => ({
+                ...c,
+                customizations: c.customizations || []
+            }));
+            setCompanies(processedData);
         } catch (error) {
             console.error('Error fetching companies:', error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSaveCustomization = (customization: CompanyCustomization) => {
+        if (!selectedCompany) return;
+
+        const currentCustomizations = selectedCompany.customizations || [];
+        const exists = currentCustomizations.find(c => c.id === customization.id);
+
+        let newCustomizations;
+        if (exists) {
+            newCustomizations = currentCustomizations.map(c => 
+                c.id === customization.id ? customization : c
+            );
+        } else {
+            newCustomizations = [...currentCustomizations, customization];
+        }
+
+        setSelectedCompany({
+            ...selectedCompany,
+            customizations: newCustomizations
+        });
+        setIsCustomizationModalOpen(false);
+        setEditingCustomization(null);
+    };
+
+    const removeCustomization = (id: string) => {
+        if (!selectedCompany) return;
+        const newCustomizations = (selectedCompany.customizations || []).filter(c => c.id !== id);
+        setSelectedCompany({
+            ...selectedCompany,
+            customizations: newCustomizations
+        });
     };
 
     // Fetch users from API
@@ -767,6 +811,66 @@ function AdminPanel({ setUser }: AdminPanelProps) {
                                 </select>
 
                             </div>
+
+                                {/* Company Customizations Section */}
+                                <div className="border-t pt-6 mt-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold text-gray-800">Company Customizations</h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEditingCustomization(null);
+                                                setIsCustomizationModalOpen(true);
+                                            }}
+                                            className="flex items-center space-x-1 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            <span>Add New</span>
+                                        </button>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mb-4">
+                                        Define sub-company specific transformation rules and custom AI prompts.
+                                    </p>
+                                    {/* a1: login as su, click be, update tab to perform be cust */}
+                                    <div className="space-y-3">
+                                        {selectedCompany?.customizations && selectedCompany.customizations.length > 0 ? (
+                                            selectedCompany.customizations.map((cust) => (
+                                                <div key={cust.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                                                    <div>
+                                                        <div className="font-medium text-gray-900">{cust.sub_company_name}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {cust.transformations?.length || 0} transformations, {cust.custom_prompt ? 'Custom prompt active' : 'No custom prompt'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex space-x-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setEditingCustomization(cust);
+                                                                setIsCustomizationModalOpen(true);
+                                                            }}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md"
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeCustomization(cust.id)}
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-md"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-6 border-2 border-dashed rounded-lg text-gray-400 text-sm">
+                                                No customizations defined yet.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <div className="flex justify-end pt-4">
                                     <button
                                         type="submit"
@@ -955,7 +1059,8 @@ function AdminPanel({ setUser }: AdminPanelProps) {
                 company_address: formData.get('companyAddress') as string,
                 company_phone: formData.get('companyPhone') as string,
                 company_email: formData.get('companyEmail') as string,
-                tax_id: formData.get('taxId') as string || undefined
+                tax_id: formData.get('taxId') as string || undefined,
+                customizations: selectedCompany.customizations || []
             }
             
             const data = await apiUpdateCompany(selectedCompany.company_id, companyData)
@@ -1130,6 +1235,13 @@ function AdminPanel({ setUser }: AdminPanelProps) {
                     {renderSectionContent()}
                 </main>
             </div>
+            
+            <CustomizationModal
+                open={isCustomizationModalOpen}
+                onOpenChange={setIsCustomizationModalOpen}
+                customization={editingCustomization}
+                onSave={handleSaveCustomization}
+            />
         </div>
     );
 }

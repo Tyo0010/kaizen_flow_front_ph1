@@ -37,6 +37,40 @@ interface ProcessedDataItem {
   incoterms_confidence?: number;
   currency: string;
   currency_confidence?: number;
+  mot?: string;
+  MOT?: string;
+  mot_confidence?: number;
+  MOT_confidence?: number;
+  blNumber?: string;
+  blNumber_confidence?: number;
+  hblNumber?: string;
+  hblNumber_confidence?: number;
+  mblNumber?: string;
+  mblNumber_confidence?: number;
+  awbNumber?: string;
+  awbNumber_confidence?: number;
+  hawbNumber?: string;
+  hawbNumber_confidence?: number;
+  consignmentNoteNumber?: string;
+  consignmentNoteNumber_confidence?: number;
+  portOfLoading?: string;
+  portOfLoading_confidence?: number;
+  portOfImport?: string;
+  portOfImport_confidence?: number;
+  portOfDischarge?: string;
+  portOfDischarge_confidence?: number;
+  flightNumber?: string;
+  flightNumber_confidence?: number;
+  voyageNo?: string;
+  voyageNo_confidence?: number;
+  vesselName?: string;
+  vesselName_confidence?: number;
+  arrivalDate?: string;
+  arrivalDate_confidence?: number;
+  departureDate?: string;
+  departureDate_confidence?: number;
+  arrivalDateType?: string;
+  arrivalDateType_confidence?: number;
   grossWeight: number;
   grossWeight_confidence?: number;
   netWeight?: number;
@@ -62,6 +96,8 @@ interface ProcessedDataItem {
   items: JobCargoItem[];
   overall_confidence?: number;
   existItems?: boolean;
+  identifiedSubCompany?: string;
+  identifiedSubCompany_confidence?: number;
 }
 
 interface JobCargoItem {
@@ -88,6 +124,8 @@ interface JobCargoItem {
   productCode_confidence?: number;
   extraDescription?: string;
   extraDescription_confidence?: number;
+  identifiedSubCompany?: string;
+  identifiedSubCompany_confidence?: number;
   // K9-specific fields
   packQtyToBeReleased?: number;
   packQtyToBeReleased_confidence?: number;
@@ -129,9 +167,41 @@ interface GeneralInformation {
   invoiceValue: string;
   invoiceValue_confidence?: number;
   vesselName?: string;
+  voyageNo?: string;
+  voyageNo_confidence?: number;
+  flightNumber?: string;
+  flightNumber_confidence?: number;
+  mot?: string;
+  mot_confidence?: number;
+  MOT?: string;
+  MOT_confidence?: number;
+  blNumber?: string;
+  blNumber_confidence?: number;
+  hblNumber?: string;
+  hblNumber_confidence?: number;
+  mblNumber?: string;
+  mblNumber_confidence?: number;
+  awbNumber?: string;
+  awbNumber_confidence?: number;
+  hawbNumber?: string;
+  hawbNumber_confidence?: number;
+  consignmentNoteNumber?: string;
+  consignmentNoteNumber_confidence?: number;
+  portOfLoading?: string;
+  portOfLoading_confidence?: number;
+  portOfImport?: string;
+  portOfImport_confidence?: number;
+  portOfDischarge?: string;
+  portOfDischarge_confidence?: number;
   vesselName_confidence?: number;
+  departureDate?: string;
+  departureDate_confidence?: number;
   arrivalDate?: string;
   arrivalDate_confidence?: number;
+  arrivalDateType?: string;
+  arrivalDateType_confidence?: number;
+  identifiedSubCompany?: string;
+  identifiedSubCompany_confidence?: number;
 }
 
 interface JobCargo {
@@ -271,6 +341,154 @@ const parseStatisticalDetailsString = (value: string): StatisticalUOM[] => {
       };
     });
 };
+
+const normalizeStringValue = (value?: string | number | null): string => {
+  if (value === undefined || value === null) return "";
+  return String(value).trim();
+};
+
+const withFallbackValue = (
+  value?: string | number | null,
+  confidence?: number,
+  fallback = "",
+  fallbackConfidence = 0
+): { value: string; confidence?: number } => {
+  const normalized = normalizeStringValue(value);
+  if (normalized) {
+    return { value: normalized, confidence };
+  }
+  return { value: fallback, confidence: fallbackConfidence };
+};
+
+const selectTransportDocument = (
+  info: GeneralInformation
+): { value: string; confidence?: number; fieldKey: keyof GeneralInformation; editValue: string } => {
+  const candidates: Array<{
+    key: keyof GeneralInformation;
+    value?: string | number | null;
+    confidence?: number;
+  }> = [
+    { key: "blNumber", value: info.blNumber, confidence: info.blNumber_confidence },
+    { key: "hblNumber", value: info.hblNumber, confidence: info.hblNumber_confidence },
+    { key: "mblNumber", value: info.mblNumber, confidence: info.mblNumber_confidence },
+    { key: "awbNumber", value: info.awbNumber, confidence: info.awbNumber_confidence },
+    { key: "hawbNumber", value: info.hawbNumber, confidence: info.hawbNumber_confidence },
+    {
+      key: "consignmentNoteNumber",
+      value: info.consignmentNoteNumber,
+      confidence: info.consignmentNoteNumber_confidence,
+    },
+  ];
+
+  const match = candidates.find((candidate) => normalizeStringValue(candidate.value));
+
+  if (match) {
+    const normalized = normalizeStringValue(match.value);
+    return {
+      value: normalized,
+      confidence: match.confidence,
+      fieldKey: match.key,
+      editValue: normalized,
+    };
+  }
+
+  return {
+    value: "",
+    confidence: 0,
+    fieldKey: "blNumber",
+    editValue: "",
+  };
+};
+
+const getTransportModeDisplay = (info: GeneralInformation) => {
+  const rawMode = normalizeStringValue(info.mot || info.MOT);
+  if (rawMode) {
+    return {
+      value: rawMode.toUpperCase(),
+      confidence: info.mot_confidence ?? info.MOT_confidence,
+    };
+  }
+  return { value: "", confidence: 0 };
+};
+
+const getPortOfImportDisplay = (info: GeneralInformation) => {
+  const normalizedImport = normalizeStringValue(info.portOfImport);
+  if (normalizedImport) {
+    return {
+      value: normalizedImport,
+      confidence: info.portOfImport_confidence,
+    };
+  }
+
+  const normalizedDischarge = normalizeStringValue(info.portOfDischarge);
+  if (normalizedDischarge) {
+    return {
+      value: normalizedDischarge,
+      confidence: info.portOfDischarge_confidence ?? info.portOfImport_confidence,
+    };
+  }
+
+  return { value: "", confidence: 0 };
+};
+
+const getVesselOrFlightDisplay = (info: GeneralInformation) => {
+  const mode = normalizeStringValue(info.mot || info.MOT).toUpperCase();
+
+  if (mode === "SEA") {
+    const vessel = normalizeStringValue(info.vesselName);
+    const voyage = normalizeStringValue(info.voyageNo);
+    const combined = [vessel, voyage ? `Voyage ${voyage}` : null]
+      .filter(Boolean)
+      .join(" | ");
+
+    if (combined) {
+      return {
+        value: combined,
+        confidence: info.vesselName_confidence ?? info.voyageNo_confidence,
+      };
+    }
+
+    return { value: "", confidence: 0 };
+  }
+
+  if (mode === "AIR") {
+    const flight = normalizeStringValue(info.flightNumber);
+    if (flight) {
+      return {
+        value: flight,
+        confidence: info.flightNumber_confidence,
+      };
+    }
+
+    return { value: "", confidence: 0 };
+  }
+
+  if (mode) {
+    return { value: "", confidence: undefined };
+  }
+
+  return { value: "", confidence: 0 };
+};
+
+const getArrivalDateDisplay = (info: GeneralInformation) => {
+  const arrivalDate = normalizeStringValue(info.arrivalDate);
+  const arrivalType =
+    normalizeStringValue(info.arrivalDateType) ||
+    normalizeStringValue((info as any).arrivalDate_type);
+
+  if (!arrivalDate) {
+    return { value: "", confidence: 0 };
+  }
+
+  const suffix = arrivalType ? ` (${arrivalType.toUpperCase()})` : "";
+  return {
+    value: `${arrivalDate}${suffix}`,
+    confidence: info.arrivalDate_confidence,
+  };
+};
+
+const getDepartureDateDisplay = (info: GeneralInformation) =>
+  withFallbackValue(info.departureDate, info.departureDate_confidence);
 
 type BaseFormType = "K1" | "K2" | "K3" | "K8" | "K9";
 
@@ -457,6 +675,99 @@ const convertUIDataToAPI = (
         ["arrivalDate_confidence"],
         general.arrivalDate_confidence
       );
+      const transportMode = general.mot || general.MOT || "";
+      const arrivalDateType =
+        general.arrivalDateType ||
+        (general as any).arrivalDate_type ||
+        "";
+      assign(entry, ["MOT", "mot"], transportMode);
+      assign(
+        entry,
+        ["MOT_confidence", "mot_confidence"],
+        general.mot_confidence ?? general.MOT_confidence
+      );
+      assign(entry, ["voyageNo"], general.voyageNo || "");
+      assign(
+        entry,
+        ["voyageNo_confidence"],
+        general.voyageNo_confidence
+      );
+      assign(entry, ["flightNumber"], general.flightNumber || "");
+      assign(
+        entry,
+        ["flightNumber_confidence"],
+        general.flightNumber_confidence
+      );
+      assign(entry, ["departureDate"], general.departureDate || "");
+      assign(
+        entry,
+        ["departureDate_confidence"],
+        general.departureDate_confidence
+      );
+      assign(entry, ["arrivalDateType"], arrivalDateType);
+      assign(
+        entry,
+        ["arrivalDateType_confidence"],
+        general.arrivalDateType_confidence
+      );
+      assign(entry, ["portOfLoading"], general.portOfLoading || "");
+      assign(
+        entry,
+        ["portOfLoading_confidence"],
+        general.portOfLoading_confidence
+      );
+      assign(entry, ["portOfImport"], general.portOfImport || "");
+      assign(
+        entry,
+        ["portOfImport_confidence"],
+        general.portOfImport_confidence
+      );
+      assign(entry, ["portOfDischarge"], general.portOfDischarge || "");
+      assign(
+        entry,
+        ["portOfDischarge_confidence"],
+        general.portOfDischarge_confidence
+      );
+      assign(entry, ["blNumber"], general.blNumber || "");
+      assign(
+        entry,
+        ["blNumber_confidence"],
+        general.blNumber_confidence
+      );
+      assign(entry, ["hblNumber"], general.hblNumber || "");
+      assign(
+        entry,
+        ["hblNumber_confidence"],
+        general.hblNumber_confidence
+      );
+      assign(entry, ["mblNumber"], general.mblNumber || "");
+      assign(
+        entry,
+        ["mblNumber_confidence"],
+        general.mblNumber_confidence
+      );
+      assign(entry, ["awbNumber"], general.awbNumber || "");
+      assign(
+        entry,
+        ["awbNumber_confidence"],
+        general.awbNumber_confidence
+      );
+      assign(entry, ["hawbNumber"], general.hawbNumber || "");
+      assign(
+        entry,
+        ["hawbNumber_confidence"],
+        general.hawbNumber_confidence
+      );
+      assign(
+        entry,
+        ["consignmentNoteNumber"],
+        general.consignmentNoteNumber || ""
+      );
+      assign(
+        entry,
+        ["consignmentNoteNumber_confidence"],
+        general.consignmentNoteNumber_confidence
+      );
       assign(entry, ["invoiceNumber", "invoceNumber"], normalizedInvoice);
       assign(
         entry,
@@ -571,6 +882,22 @@ const convertUIDataToAPI = (
     invoiceNumber = parseInvoiceNumbers(invoiceNumber);
   }
 
+  const transportMode =
+    uiData.generalInformation.mot ||
+    (uiData.generalInformation as any).MOT ||
+    "";
+  const arrivalDateType =
+    uiData.generalInformation.arrivalDateType ||
+    (uiData.generalInformation as any).arrivalDate_type ||
+    "";
+  const portOfImport =
+    uiData.generalInformation.portOfImport ||
+    uiData.generalInformation.portOfDischarge ||
+    "";
+  const portOfImportConfidence =
+    uiData.generalInformation.portOfImport_confidence ??
+    uiData.generalInformation.portOfDischarge_confidence;
+
   const apiDataItem: ProcessedDataItem = {
     invoiceNumber: invoiceNumber,
     invoiceNumber_confidence:
@@ -597,6 +924,50 @@ const convertUIDataToAPI = (
     generalDescription: uiData.generalInformation.generalDescription,
     generalDescription_confidence:
       uiData.generalInformation.generalDescription_confidence,
+    vesselName: uiData.generalInformation.vesselName || "",
+    vesselName_confidence: uiData.generalInformation.vesselName_confidence,
+    voyageNo: uiData.generalInformation.voyageNo || "",
+    voyageNo_confidence: uiData.generalInformation.voyageNo_confidence,
+    flightNumber: uiData.generalInformation.flightNumber || "",
+    flightNumber_confidence: uiData.generalInformation.flightNumber_confidence,
+    arrivalDate: uiData.generalInformation.arrivalDate || "",
+    arrivalDate_confidence: uiData.generalInformation.arrivalDate_confidence,
+    arrivalDateType,
+    arrivalDateType_confidence:
+      uiData.generalInformation.arrivalDateType_confidence,
+    departureDate: uiData.generalInformation.departureDate || "",
+    departureDate_confidence:
+      uiData.generalInformation.departureDate_confidence,
+    portOfLoading: uiData.generalInformation.portOfLoading || "",
+    portOfLoading_confidence:
+      uiData.generalInformation.portOfLoading_confidence,
+    portOfImport,
+    portOfImport_confidence: portOfImportConfidence,
+    portOfDischarge: uiData.generalInformation.portOfDischarge || "",
+    portOfDischarge_confidence:
+      uiData.generalInformation.portOfDischarge_confidence,
+    blNumber: uiData.generalInformation.blNumber || "",
+    blNumber_confidence: uiData.generalInformation.blNumber_confidence,
+    hblNumber: uiData.generalInformation.hblNumber || "",
+    hblNumber_confidence: uiData.generalInformation.hblNumber_confidence,
+    mblNumber: uiData.generalInformation.mblNumber || "",
+    mblNumber_confidence: uiData.generalInformation.mblNumber_confidence,
+    awbNumber: uiData.generalInformation.awbNumber || "",
+    awbNumber_confidence: uiData.generalInformation.awbNumber_confidence,
+    hawbNumber: uiData.generalInformation.hawbNumber || "",
+    hawbNumber_confidence: uiData.generalInformation.hawbNumber_confidence,
+    consignmentNoteNumber:
+      uiData.generalInformation.consignmentNoteNumber || "",
+    consignmentNoteNumber_confidence:
+      uiData.generalInformation.consignmentNoteNumber_confidence,
+    mot: transportMode,
+    MOT: transportMode,
+    mot_confidence:
+      uiData.generalInformation.mot_confidence ??
+      (uiData.generalInformation as any).MOT_confidence,
+    MOT_confidence:
+      uiData.generalInformation.mot_confidence ??
+      (uiData.generalInformation as any).MOT_confidence,
     consigneeName: uiData.generalInformation.consigneeName,
     consigneeName_confidence:
       uiData.generalInformation.consigneeName_confidence,
@@ -734,6 +1105,30 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
     }
   }, [showPreview, extractedData, isSealnetTemplate]);
 
+  const transportDisplay = React.useMemo(() => {
+    if (!extractedData?.generalInformation) return null;
+    const info = extractedData.generalInformation;
+    const rawMode = normalizeStringValue(info.mot || info.MOT).toUpperCase();
+    const vesselField: keyof GeneralInformation | null =
+      rawMode === "SEA"
+        ? "vesselName"
+        : rawMode === "AIR"
+        ? "flightNumber"
+        : null;
+
+    return {
+      rawMode,
+      vesselField,
+      mode: getTransportModeDisplay(info),
+      doc: selectTransportDocument(info),
+      pol: withFallbackValue(info.portOfLoading, info.portOfLoading_confidence),
+      pod: getPortOfImportDisplay(info),
+      vesselFlight: getVesselOrFlightDisplay(info),
+      arrival: getArrivalDateDisplay(info),
+      departure: getDepartureDateDisplay(info),
+    };
+  }, [extractedData]);
+
   const renderSealnetCell = (
     value?: React.ReactNode,
     confidence?: number,
@@ -757,12 +1152,14 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
     confidence,
     multiline = false,
     fieldKey,
+    className = "",
   }: {
     label: string;
     value?: React.ReactNode;
     confidence?: number;
     multiline?: boolean;
     fieldKey?: keyof GeneralInformation;
+    className?: string;
   }) => {
     const stringValue =
       value === undefined || value === null ? "" : String(value);
@@ -800,7 +1197,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
     }
 
     return (
-      <div className="space-y-1">
+      <div className={`space-y-1 ${className}`}>
         <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
           {label}
         </Label>
@@ -818,6 +1215,25 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
 
     return (
       <>
+        {/* CUSTOMIZATION INFO */}
+        {(info.identifiedSubCompany || isEditMode) && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-blue-800 bg-blue-50 px-2 py-1.5 rounded flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+              AI CUSTOMIZATION IDENTIFICATION
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-3">
+              <SealnetField
+                label="Identified Client/Sub-Company"
+                value={info.identifiedSubCompany || "No specific client identified"}
+                confidence={info.identifiedSubCompany_confidence}
+                fieldKey="identifiedSubCompany"
+                className="bg-blue-50/30 border-blue-100"
+              />
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1.5 rounded">
             INVOICE INFORMATION
@@ -1125,6 +1541,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
     setMessage("");
 
     try {
+      // anal: ui is conv to file output regardless of edit
       const apiData = convertUIDataToAPI(extractedData);
 
       await generateExcelFiles(uploadSessionId, apiData);
@@ -1231,6 +1648,48 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                     renderSealnetGeneralInformation()
                   ) : (
                     <>
+                  {/* CUSTOMIZATION INFO */}
+                  {(extractedData.generalInformation.identifiedSubCompany || isEditMode) && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-blue-800 bg-blue-50 px-2 py-1.5 rounded flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        AI CUSTOMIZATION IDENTIFICATION
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="identifiedSubCompany" className="text-sm font-medium text-blue-700">
+                            Identified Client/Sub-Company
+                          </Label>
+                          {isEditMode ? (
+                            <Input
+                              id="identifiedSubCompany"
+                              value={extractedData.generalInformation.identifiedSubCompany || ""}
+                              onChange={(e) =>
+                                updateGeneralInformation(
+                                  "identifiedSubCompany",
+                                  e.target.value
+                                )
+                              }
+                              className="text-sm border-blue-200 focus:border-blue-400"
+                              placeholder="e.g., Apple Inc."
+                            />
+                          ) : (
+                            <div
+                              className={`p-2 rounded border h-8 flex items-center min-w-[180px] text-sm bg-blue-50/30 border-blue-100 ${getConfidenceColor(
+                                extractedData.generalInformation.identifiedSubCompany_confidence
+                              )}`}
+                            >
+                              {extractedData.generalInformation.identifiedSubCompany || "No specific client identified"}
+                            </div>
+                          )}
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            Rules for this client were automatically applied by AI.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* INVOICE INFORMATION */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1.5 rounded">
@@ -1512,6 +1971,178 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                             )}`}
                           >
                             {extractedData.generalInformation.NoOfPackages}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TRANSPORT INFORMATION */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1.5 rounded">
+                      TRANSPORT INFORMATION
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="mot" className="text-sm">
+                          MOT (Mode)
+                        </Label>
+                        {isEditMode ? (
+                          <Input
+                            id="mot"
+                            value={
+                              extractedData.generalInformation.mot ||
+                              extractedData.generalInformation.MOT ||
+                              ""
+                            }
+                            onChange={(e) =>
+                              updateGeneralInformation("mot", e.target.value)
+                            }
+                            className="text-sm"
+                          />
+                        ) : (
+                          <div
+                            className={`p-2 rounded border h-8 flex items-center min-w-[180px] text-sm ${getConfidenceColor(
+                              transportDisplay?.mode.confidence
+                            )}`}
+                          >
+                            {transportDisplay?.mode.value ?? ""}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                          <Label htmlFor="departureDate" className="text-sm">
+                            Departure Date (ETD)
+                          </Label>
+                          {isEditMode ? (
+                            <Input
+                              id="departureDate"
+                              value={
+                                extractedData.generalInformation.departureDate ||
+                                ""
+                              }
+                              onChange={(e) =>
+                                updateGeneralInformation(
+                                  "departureDate",
+                                  e.target.value
+                                )
+                              }
+                              className="text-sm"
+                            />
+                          ) : (
+                            <div
+                              className={`p-2 rounded border h-8 flex items-center min-w-[180px] text-sm ${getConfidenceColor(
+                                transportDisplay?.departure.confidence
+                              )}`}
+                            >
+                              {transportDisplay?.departure.value ??
+                                ""}
+                            </div>
+                          )}
+                        </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="portOfLoading" className="text-sm">
+                          Port/Airport of Loading (POL)
+                        </Label>
+                        {isEditMode ? (
+                          <Input
+                            id="portOfLoading"
+                            value={
+                              extractedData.generalInformation.portOfLoading ||
+                              ""
+                            }
+                            onChange={(e) =>
+                              updateGeneralInformation(
+                                "portOfLoading",
+                                e.target.value
+                              )
+                            }
+                            className="text-sm"
+                          />
+                        ) : (
+                          <div
+                            className={`p-2 rounded border h-8 flex items-center min-w-[180px] text-sm ${getConfidenceColor(
+                              transportDisplay?.pol.confidence
+                            )}`}
+                          >
+                            {transportDisplay?.pol.value ?? ""}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="portOfImport" className="text-sm">
+                          Port/Airport of Import (POD)
+                        </Label>
+                        {isEditMode ? (
+                          <Input
+                            id="portOfImport"
+                            value={
+                              extractedData.generalInformation.portOfImport ||
+                              extractedData.generalInformation.portOfDischarge ||
+                              ""
+                            }
+                            onChange={(e) =>
+                              updateGeneralInformation(
+                                "portOfImport",
+                                e.target.value
+                              )
+                            }
+                            className="text-sm"
+                          />
+                        ) : (
+                          <div
+                            className={`p-2 rounded border h-8 flex items-center min-w-[180px] text-sm ${getConfidenceColor(
+                              transportDisplay?.pod.confidence
+                            )}`}
+                          >
+                            {transportDisplay?.pod.value ?? ""}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="vesselFlight"
+                          className="text-sm"
+                        >
+                          Vessel Name / Flight No
+                        </Label>
+                        {isEditMode && transportDisplay?.vesselField ? (
+                          (() => {
+                            const vesselField = transportDisplay.vesselField;
+                            return (
+                              <Input
+                                id="vesselFlight"
+                                value={
+                                  (extractedData.generalInformation as any)[
+                                    vesselField
+                                  ] || ""
+                                }
+                                onChange={(e) =>
+                                  updateGeneralInformation(
+                                    vesselField,
+                                    e.target.value
+                                  )
+                                }
+                                className="text-sm"
+                              />
+                            );
+                          })()
+                        ) : isEditMode && !transportDisplay?.vesselField ? (
+                          <div className="p-2 rounded border h-8 flex items-center min-w-[180px] text-sm bg-gray-50 text-gray-500">
+                            {""}
+                          </div>
+                        ) : (
+                          <div
+                            className={`p-2 rounded border h-8 flex items-center min-w-[180px] text-sm ${getConfidenceColor(
+                              transportDisplay?.vesselFlight.confidence
+                            )}`}
+                          >
+                            {transportDisplay?.vesselFlight.value ??
+                              ""}
                           </div>
                         )}
                       </div>

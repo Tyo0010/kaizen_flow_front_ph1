@@ -33,6 +33,8 @@ import {
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Badge } from "../components/ui/badge";
 import { PreviewModal } from "../components/PreviewModal";
+import type { Transformation } from "../components/TransformationModal";
+
 
 interface OutputFormat {
   format_id: string;
@@ -64,6 +66,36 @@ interface ProcessedDataItem {
   incoterms_confidence?: number;
   currency: string;
   currency_confidence?: number;
+  mot?: string;
+  MOT?: string;
+  mot_confidence?: number;
+  MOT_confidence?: number;
+  blNumber?: string;
+  blNumber_confidence?: number;
+  hblNumber?: string;
+  hblNumber_confidence?: number;
+  mblNumber?: string;
+  mblNumber_confidence?: number;
+  awbNumber?: string;
+  awbNumber_confidence?: number;
+  hawbNumber?: string;
+  hawbNumber_confidence?: number;
+  consignmentNoteNumber?: string;
+  consignmentNoteNumber_confidence?: number;
+  portOfLoading?: string;
+  portOfLoading_confidence?: number;
+  portOfImport?: string;
+  portOfImport_confidence?: number;
+  portOfDischarge?: string;
+  portOfDischarge_confidence?: number;
+  flightNumber?: string;
+  flightNumber_confidence?: number;
+  voyageNo?: string;
+  voyageNo_confidence?: number;
+  departureDate?: string;
+  departureDate_confidence?: number;
+  arrivalDateType?: string;
+  arrivalDateType_confidence?: number;
   grossWeight: number;
   grossWeight_confidence?: number;
   netWeight?: number;
@@ -170,9 +202,39 @@ interface GeneralInformation {
   invoiceValue: string;
   invoiceValue_confidence?: number;
   vesselName?: string;
+  voyageNo?: string;
+  voyageNo_confidence?: number;
+  flightNumber?: string;
+  flightNumber_confidence?: number;
+  mot?: string;
+  mot_confidence?: number;
+  MOT?: string;
+  MOT_confidence?: number;
+  blNumber?: string;
+  blNumber_confidence?: number;
+  hblNumber?: string;
+  hblNumber_confidence?: number;
+  mblNumber?: string;
+  mblNumber_confidence?: number;
+  awbNumber?: string;
+  awbNumber_confidence?: number;
+  hawbNumber?: string;
+  hawbNumber_confidence?: number;
+  consignmentNoteNumber?: string;
+  consignmentNoteNumber_confidence?: number;
+  portOfLoading?: string;
+  portOfLoading_confidence?: number;
+  portOfImport?: string;
+  portOfImport_confidence?: number;
+  portOfDischarge?: string;
+  portOfDischarge_confidence?: number;
   vesselName_confidence?: number;
+  departureDate?: string;
+  departureDate_confidence?: number;
   arrivalDate?: string;
   arrivalDate_confidence?: number;
+  arrivalDateType?: string;
+  arrivalDateType_confidence?: number;
 }
 
 interface JobCargo {
@@ -391,6 +453,9 @@ function MainPage() {
   const [message, setMessage] = useState("");
   const [loadingFormats, setLoadingFormats] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  
+  // Custom Transformations state
+  const [customTransformations] = useState<Transformation[]>([]);
 
   const selectedTemplateInfo = useMemo(
     () =>
@@ -610,6 +675,49 @@ const convertApiDataToUI = (
       vesselName_confidence: firstItem.vesselName_confidence,
       arrivalDate: firstItem.arrivalDate || "",
       arrivalDate_confidence: firstItem.arrivalDate_confidence,
+      voyageNo: firstItem.voyageNo || "",
+      voyageNo_confidence: firstItem.voyageNo_confidence,
+      flightNumber: firstItem.flightNumber || "",
+      flightNumber_confidence: firstItem.flightNumber_confidence,
+      mot: firstItem.mot || (firstItem as any).MOT || "",
+      mot_confidence:
+        firstItem.mot_confidence ?? (firstItem as any).MOT_confidence,
+      MOT: (firstItem as any).MOT || firstItem.mot || "",
+      MOT_confidence:
+        (firstItem as any).MOT_confidence ?? firstItem.mot_confidence,
+      blNumber: (firstItem as any).blNumber || "",
+      blNumber_confidence: (firstItem as any).blNumber_confidence,
+      hblNumber: (firstItem as any).hblNumber || "",
+      hblNumber_confidence: (firstItem as any).hblNumber_confidence,
+      mblNumber: (firstItem as any).mblNumber || "",
+      mblNumber_confidence: (firstItem as any).mblNumber_confidence,
+      awbNumber: (firstItem as any).awbNumber || "",
+      awbNumber_confidence: (firstItem as any).awbNumber_confidence,
+      hawbNumber: (firstItem as any).hawbNumber || "",
+      hawbNumber_confidence: (firstItem as any).hawbNumber_confidence,
+      consignmentNoteNumber:
+        (firstItem as any).consignmentNoteNumber || "",
+      consignmentNoteNumber_confidence: (firstItem as any)
+        .consignmentNoteNumber_confidence,
+      portOfLoading: (firstItem as any).portOfLoading || "",
+      portOfLoading_confidence: (firstItem as any).portOfLoading_confidence,
+      portOfImport:
+        (firstItem as any).portOfImport ||
+        (firstItem as any).portOfDischarge ||
+        "",
+      portOfImport_confidence:
+        (firstItem as any).portOfImport_confidence ??
+        (firstItem as any).portOfDischarge_confidence,
+      portOfDischarge: (firstItem as any).portOfDischarge || "",
+      portOfDischarge_confidence: (firstItem as any).portOfDischarge_confidence,
+      departureDate: (firstItem as any).departureDate || "",
+      departureDate_confidence: (firstItem as any).departureDate_confidence,
+      arrivalDateType:
+        (firstItem as any).arrivalDateType ||
+        (firstItem as any).arrivalDate_type ||
+        "",
+      arrivalDateType_confidence: (firstItem as any)
+        .arrivalDateType_confidence,
     };
 
     const allItems: DisplayJobCargoItem[] = [];
@@ -1393,7 +1501,7 @@ const convertApiDataToUI = (
       console.log("Step 1: Requesting presigned URLs");
 
       const presignedResponse: PresignedUrlResponse =
-        await requestPresignedUrls(fileInfos, outputFormat);
+        await requestPresignedUrls(fileInfos, outputFormat, customTransformations);
       console.log("Presigned URLs response:", presignedResponse);
 
       const { upload_session_id, presigned_urls } = presignedResponse;
@@ -1437,7 +1545,8 @@ const convertApiDataToUI = (
         outputFormat,
         confirmationFiles,
         formatValidator,
-        selectedTemplate
+        selectedTemplate,
+        customTransformations
       );
       console.log("Upload confirmation response:", confirmResponse);
 

@@ -168,6 +168,36 @@ interface ProcessedDataItem {
   incoterms_confidence?: number;
   currency: string;
   currency_confidence?: number;
+  mot?: string;
+  MOT?: string;
+  mot_confidence?: number;
+  MOT_confidence?: number;
+  blNumber?: string;
+  blNumber_confidence?: number;
+  hblNumber?: string;
+  hblNumber_confidence?: number;
+  mblNumber?: string;
+  mblNumber_confidence?: number;
+  awbNumber?: string;
+  awbNumber_confidence?: number;
+  hawbNumber?: string;
+  hawbNumber_confidence?: number;
+  consignmentNoteNumber?: string;
+  consignmentNoteNumber_confidence?: number;
+  portOfLoading?: string;
+  portOfLoading_confidence?: number;
+  portOfImport?: string;
+  portOfImport_confidence?: number;
+  portOfDischarge?: string;
+  portOfDischarge_confidence?: number;
+  flightNumber?: string;
+  flightNumber_confidence?: number;
+  voyageNo?: string;
+  voyageNo_confidence?: number;
+  departureDate?: string;
+  departureDate_confidence?: number;
+  arrivalDateType?: string;
+  arrivalDateType_confidence?: number;
   grossWeight: number;
   grossWeight_confidence?: number;
   netWeight?: number;
@@ -273,9 +303,39 @@ interface GeneralInformation {
   invoiceValue: string;
   invoiceValue_confidence?: number;
   vesselName?: string;
+  voyageNo?: string;
+  voyageNo_confidence?: number;
+  flightNumber?: string;
+  flightNumber_confidence?: number;
+  mot?: string;
+  mot_confidence?: number;
+  MOT?: string;
+  MOT_confidence?: number;
+  blNumber?: string;
+  blNumber_confidence?: number;
+  hblNumber?: string;
+  hblNumber_confidence?: number;
+  mblNumber?: string;
+  mblNumber_confidence?: number;
+  awbNumber?: string;
+  awbNumber_confidence?: number;
+  hawbNumber?: string;
+  hawbNumber_confidence?: number;
+  consignmentNoteNumber?: string;
+  consignmentNoteNumber_confidence?: number;
+  portOfLoading?: string;
+  portOfLoading_confidence?: number;
+  portOfImport?: string;
+  portOfImport_confidence?: number;
+  portOfDischarge?: string;
+  portOfDischarge_confidence?: number;
   vesselName_confidence?: number;
+  departureDate?: string;
+  departureDate_confidence?: number;
   arrivalDate?: string;
   arrivalDate_confidence?: number;
+  arrivalDateType?: string;
+  arrivalDateType_confidence?: number;
 }
 
 interface JobCargo {
@@ -590,6 +650,49 @@ function DocumentsPage() {
       vesselName_confidence: firstItem.vesselName_confidence,
       arrivalDate: firstItem.arrivalDate || "",
       arrivalDate_confidence: firstItem.arrivalDate_confidence,
+      voyageNo: firstItem.voyageNo || "",
+      voyageNo_confidence: firstItem.voyageNo_confidence,
+      flightNumber: firstItem.flightNumber || "",
+      flightNumber_confidence: firstItem.flightNumber_confidence,
+      mot: firstItem.mot || (firstItem as any).MOT || "",
+      mot_confidence:
+        firstItem.mot_confidence ?? (firstItem as any).MOT_confidence,
+      MOT: (firstItem as any).MOT || firstItem.mot || "",
+      MOT_confidence:
+        (firstItem as any).MOT_confidence ?? firstItem.mot_confidence,
+      blNumber: (firstItem as any).blNumber || "",
+      blNumber_confidence: (firstItem as any).blNumber_confidence,
+      hblNumber: (firstItem as any).hblNumber || "",
+      hblNumber_confidence: (firstItem as any).hblNumber_confidence,
+      mblNumber: (firstItem as any).mblNumber || "",
+      mblNumber_confidence: (firstItem as any).mblNumber_confidence,
+      awbNumber: (firstItem as any).awbNumber || "",
+      awbNumber_confidence: (firstItem as any).awbNumber_confidence,
+      hawbNumber: (firstItem as any).hawbNumber || "",
+      hawbNumber_confidence: (firstItem as any).hawbNumber_confidence,
+      consignmentNoteNumber:
+        (firstItem as any).consignmentNoteNumber || "",
+      consignmentNoteNumber_confidence: (firstItem as any)
+        .consignmentNoteNumber_confidence,
+      portOfLoading: (firstItem as any).portOfLoading || "",
+      portOfLoading_confidence: (firstItem as any).portOfLoading_confidence,
+      portOfImport:
+        (firstItem as any).portOfImport ||
+        (firstItem as any).portOfDischarge ||
+        "",
+      portOfImport_confidence:
+        (firstItem as any).portOfImport_confidence ??
+        (firstItem as any).portOfDischarge_confidence,
+      portOfDischarge: (firstItem as any).portOfDischarge || "",
+      portOfDischarge_confidence: (firstItem as any).portOfDischarge_confidence,
+      departureDate: (firstItem as any).departureDate || "",
+      departureDate_confidence: (firstItem as any).departureDate_confidence,
+      arrivalDateType:
+        (firstItem as any).arrivalDateType ||
+        (firstItem as any).arrivalDate_type ||
+        "",
+      arrivalDateType_confidence: (firstItem as any)
+        .arrivalDateType_confidence,
     };
 
     // Collect all items from all data entries
@@ -1346,8 +1449,8 @@ function DocumentsPage() {
                       Monthly Limit
                     </div>
                     <div className="text-2xl font-bold text-gray-900">
-                      {usageStats.token_usage.monthly_credit_limit
-                        ? usageStats.token_usage.monthly_credit_limit.toLocaleString()
+                      {usageStats.token_usage.monthly_credit_limit 
+                        ? usageStats.token_usage.monthly_credit_limit.toLocaleString() 
                         : "Unlimited"}
                     </div>
                     <div className="text-xs text-gray-600">credits allowed</div>
@@ -1371,53 +1474,57 @@ function DocumentsPage() {
                     const percentage = usageStats.token_usage.monthly_credit_limit
                       ? (usageStats.token_usage.current_month_credits / usageStats.token_usage.monthly_credit_limit) * 100
                       : 0;
-
+                    
                     const isUnlimited = usageStats.token_usage.monthly_credit_limit === null;
-
+                    
                     return (
                       <div
-                        className={`p-4 rounded-lg border ${isUnlimited
+                        className={`p-4 rounded-lg border ${
+                          isUnlimited 
                             ? "bg-blue-50 border-blue-200"
                             : percentage >= 80
-                              ? "bg-red-50 border-red-200"
-                              : percentage >= 60
-                                ? "bg-amber-50 border-amber-200"
-                                : "bg-blue-50 border-blue-200"
-                          }`}
+                            ? "bg-red-50 border-red-200"
+                            : percentage >= 60
+                            ? "bg-amber-50 border-amber-200"
+                            : "bg-blue-50 border-blue-200"
+                        }`}
                       >
                         <div
-                          className={`text-sm font-medium mb-1 ${isUnlimited
+                          className={`text-sm font-medium mb-1 ${
+                            isUnlimited
                               ? "text-blue-800"
                               : percentage >= 80
-                                ? "text-red-800"
-                                : percentage >= 60
-                                  ? "text-amber-800"
-                                  : "text-blue-800"
-                            }`}
+                              ? "text-red-800"
+                              : percentage >= 60
+                              ? "text-amber-800"
+                              : "text-blue-800"
+                          }`}
                         >
                           Usage %
                         </div>
                         <div
-                          className={`text-2xl font-bold ${isUnlimited
+                          className={`text-2xl font-bold ${
+                            isUnlimited
                               ? "text-blue-900"
                               : percentage >= 80
-                                ? "text-red-900"
-                                : percentage >= 60
-                                  ? "text-amber-900"
-                                  : "text-blue-900"
-                            }`}
+                              ? "text-red-900"
+                              : percentage >= 60
+                              ? "text-amber-900"
+                              : "text-blue-900"
+                          }`}
                         >
                           {isUnlimited ? "N/A" : `${percentage.toFixed(1)}%`}
                         </div>
                         <div
-                          className={`text-xs ${isUnlimited
+                          className={`text-xs ${
+                            isUnlimited
                               ? "text-blue-600"
                               : percentage >= 80
-                                ? "text-red-600"
-                                : percentage >= 60
-                                  ? "text-amber-600"
-                                  : "text-blue-600"
-                            }`}
+                              ? "text-red-600"
+                              : percentage >= 60
+                              ? "text-amber-600"
+                              : "text-blue-600"
+                          }`}
                         >
                           of limit used
                         </div>
@@ -1789,263 +1896,402 @@ function DocumentsPage() {
                       key={sessionKey}
                       className="border-b border-gray-100 last:border-b-0"
                     >
-                      {/* Group Header */}
-                      <div className="p-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between">
-                        <div
-                          className="flex items-center gap-4 cursor-pointer flex-1"
-                          onClick={() => toggleGroup(sessionKey)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <svg
-                              className={`w-5 h-5 text-gray-600 transition-transform ${expandedGroups.has(sessionKey) ? "rotate-90" : ""
-                                }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5l7 7-7 7"
-                              />
-                            </svg>
-                            <div className="text-md font-semibold text-gray-800">
-                              {formatGroupDate(groupDocuments[0].created_at)}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {sessionKey === "no-session"
-                                ? "Individual Uploads"
-                                : `Session ID: ${sessionKey}`}
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {groupDocumentsByBaseFilename(groupDocuments).length}{" "}
-                            unique file
-                            {groupDocumentsByBaseFilename(groupDocuments)
-                              .length !== 1
-                              ? "s"
-                              : ""}{" "}
-                            • {groupDocuments.length} total document
-                            {groupDocuments.length !== 1 ? "s" : ""}
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                          <span>Formats: {getUniqueTemplates(groupDocuments)} {getUniqueFormats(groupDocuments)}</span>
-                          {sessionKey !== "no-session" && (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  if (!canFetchUsage || isUsageLoading) return;
-
-                                  if (isUsageVisible) {
-                                    setSessionUsageVisible((prev) => {
-                                      const next = new Set(prev);
-                                      next.delete(sessionKey);
-                                      return next;
-                                    });
-                                    return;
-                                  }
-
-                                  // If we already have data, just show it
-                                  if (sessionUsage) {
-                                    setSessionUsageVisible((prev) => {
-                                      const next = new Set(prev);
-                                      next.add(sessionKey);
-                                      return next;
-                                    });
-                                    return;
-                                  }
-
-                                  const usage = await fetchSessionTokenUsage(
-                                    sessionKey
-                                  );
-                                  if (usage) {
-                                    setSessionUsageVisible((prev) => {
-                                      const next = new Set(prev);
-                                      next.add(sessionKey);
-                                      return next;
-                                    });
-                                  }
-                                }}
-                                disabled={isUsageLoading || !canFetchUsage}
-                                className="inline-flex items-center"
-                              >
-                                {isUsageLoading ? (
-                                  <div className="animate-spin w-4 h-4 mr-2 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                                ) : (
-                                  <svg
-                                    className="w-4 h-4 mr-2"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 8c-1.657 0-3 1.567-3 3.5S10.343 15 12 15s3-1.567 3-3.5S13.657 8 12 8z"
-                                    />
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 4v1m0 14v1m8-8h-1M5 12H4m13.657-5.657l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707M17.657 17.657l.707.707"
-                                    />
-                                  </svg>
-                                )}
-                                {isUsageVisible ? "Hide usage" : "Token usage"}
-                              </Button>
-                              {sessionUsage && isUsageVisible && (
-                                <span className="text-xs text-gray-600">
-                                  Tokens:{" "}
-                                  {sessionUsage.token_usage.total_tokens.toLocaleString()}{" "}
-                                  • Credits:{" "}
-                                  {sessionUsage.token_usage.total_credits_consumed.toLocaleString(
-                                    undefined,
-                                    { maximumFractionDigits: 4 }
-                                  )}
-                                </span>
-                              )}
-                              {sessionUsageError && (
-                                <span className="text-xs text-red-600">
-                                  {sessionUsageError}
-                                </span>
-                              )}
-                              {!sessionUsage && !canFetchUsage && (
-                                <span className="text-xs text-gray-500">
-                                  Usage available after processing completes
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (
-                                window.confirm(
-                                  `Are you sure you want to delete all ${groupDocuments.length
-                                  } documents from ${sessionKey === "no-session"
-                                    ? "individual uploads"
-                                    : `session ${sessionKey}`
-                                  }? This action cannot be undone.`
-                                )
-                              ) {
-                                deleteDocumentGroup(groupDocuments);
-                              }
-                            }}
-                            className="inline-flex items-center"
-                            title={`Delete all ${groupDocuments.length} documents from this session`}
+                    {/* Group Header */}
+                    <div className="p-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between">
+                      <div
+                        className="flex items-center gap-4 cursor-pointer flex-1"
+                        onClick={() => toggleGroup(sessionKey)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <svg
+                            className={`w-5 h-5 text-gray-600 transition-transform ${expandedGroups.has(sessionKey) ? "rotate-90" : ""
+                              }`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
-                            <svg
-                              className="w-4 h-4 mr-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                            Delete
-                          </Button>
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                          <div className="text-md font-semibold text-gray-800">
+                            {formatGroupDate(groupDocuments[0].created_at)}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {sessionKey === "no-session"
+                              ? "Individual Uploads"
+                              : `Session ID: ${sessionKey}`}
+                          </div>
                         </div>
-                      </div>{" "}
-                      {/* Group Content */}
-                      {expandedGroups.has(sessionKey) && (
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead className="bg-gray-25 border-b border-gray-200">
-                              <tr>
-                                <th className="text-left p-4 font-semibold text-gray-700">
-                                  Document Name
-                                </th>
-                                <th className="text-left p-4 font-semibold text-gray-700">
-                                  Status
-                                </th>
-                                <th className="text-left p-4 font-semibold text-gray-700">
-                                  Template
-                                </th>
-                                <th className="text-left p-4 font-semibold text-gray-700">
-                                  Output Format
-                                </th>
-                                <th className="text-left p-4 font-semibold text-gray-700">
-                                  Actions
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                              {groupDocumentsByBaseFilename(groupDocuments).map(
-                                ([_, fileGroupDocuments]) => {
-                                  // Show only the first document from each file group (usually the original PDF)
-                                  const representativeDocument =
-                                    fileGroupDocuments[0];
-                                  const templateName =
-                                    getTemplateName(representativeDocument);
-                                  return (
+                        <div className="text-sm text-gray-600">
+                          {groupDocumentsByBaseFilename(groupDocuments).length}{" "}
+                          unique file
+                          {groupDocumentsByBaseFilename(groupDocuments)
+                            .length !== 1
+                            ? "s"
+                            : ""}{" "}
+                          • {groupDocuments.length} total document
+                          {groupDocuments.length !== 1 ? "s" : ""}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                        <span>Formats: {getUniqueTemplates(groupDocuments)} {getUniqueFormats(groupDocuments)}</span>
+                        {sessionKey !== "no-session" && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!canFetchUsage || isUsageLoading) return;
+
+                                if (isUsageVisible) {
+                                  setSessionUsageVisible((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(sessionKey);
+                                    return next;
+                                  });
+                                  return;
+                                }
+
+                                // If we already have data, just show it
+                                if (sessionUsage) {
+                                  setSessionUsageVisible((prev) => {
+                                    const next = new Set(prev);
+                                    next.add(sessionKey);
+                                    return next;
+                                  });
+                                  return;
+                                }
+
+                                const usage = await fetchSessionTokenUsage(
+                                  sessionKey
+                                );
+                                if (usage) {
+                                  setSessionUsageVisible((prev) => {
+                                    const next = new Set(prev);
+                                    next.add(sessionKey);
+                                    return next;
+                                  });
+                                }
+                              }}
+                              disabled={isUsageLoading || !canFetchUsage}
+                              className="inline-flex items-center"
+                            >
+                              {isUsageLoading ? (
+                                <div className="animate-spin w-4 h-4 mr-2 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                              ) : (
+                                <svg
+                                  className="w-4 h-4 mr-2"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8c-1.657 0-3 1.567-3 3.5S10.343 15 12 15s3-1.567 3-3.5S13.657 8 12 8z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 4v1m0 14v1m8-8h-1M5 12H4m13.657-5.657l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707M17.657 17.657l.707.707"
+                                  />
+                                </svg>
+                              )}
+                              {isUsageVisible ? "Hide usage" : "Token usage"}
+                            </Button>
+                            {sessionUsage && isUsageVisible && (
+                              <span className="text-xs text-gray-600">
+                                Tokens:{" "}
+                                {sessionUsage.token_usage.total_tokens.toLocaleString()}{" "}
+                                • Credits:{" "}
+                                {sessionUsage.token_usage.total_credits_consumed.toLocaleString(
+                                  undefined,
+                                  { maximumFractionDigits: 4 }
+                                )}
+                              </span>
+                            )}
+                            {sessionUsageError && (
+                              <span className="text-xs text-red-600">
+                                {sessionUsageError}
+                              </span>
+                            )}
+                            {!sessionUsage && !canFetchUsage && (
+                              <span className="text-xs text-gray-500">
+                                Usage available after processing completes
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              window.confirm(
+                                `Are you sure you want to delete all ${groupDocuments.length
+                                } documents from ${sessionKey === "no-session"
+                                  ? "individual uploads"
+                                  : `session ${sessionKey}`
+                                }? This action cannot be undone.`
+                              )
+                            ) {
+                              deleteDocumentGroup(groupDocuments);
+                            }
+                          }}
+                          className="inline-flex items-center"
+                          title={`Delete all ${groupDocuments.length} documents from this session`}
+                        >
+                          <svg
+                            className="w-4 h-4 mr-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                          Delete
+                        </Button>
+                      </div>
+                    </div>{" "}
+                    {/* Group Content */}
+                    {expandedGroups.has(sessionKey) && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-25 border-b border-gray-200">
+                            <tr>
+                              <th className="text-left p-4 font-semibold text-gray-700">
+                                Document Name
+                              </th>
+                              <th className="text-left p-4 font-semibold text-gray-700">
+                                Status
+                              </th>
+                              <th className="text-left p-4 font-semibold text-gray-700">
+                                Template
+                              </th>
+                              <th className="text-left p-4 font-semibold text-gray-700">
+                                Output Format
+                              </th>
+                              <th className="text-left p-4 font-semibold text-gray-700">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {groupDocumentsByBaseFilename(groupDocuments).map(
+                              ([_, fileGroupDocuments]) => {
+                                // Show only the first document from each file group (usually the original PDF)
+                                const representativeDocument =
+                                  fileGroupDocuments[0];
+                                const templateName =
+                                  getTemplateName(representativeDocument);
+                                return (
+                                  <tr
+                                    key={representativeDocument.document_id}
+                                    className="hover:bg-gray-25 transition-colors"
+                                  >
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center">
+                                          <svg
+                                            className="w-4 h-4 text-blue-600"
+                                            fill="currentColor"
+                                            viewBox="0 0 20 20"
+                                          >
+                                            <path
+                                              fillRule="evenodd"
+                                              d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                                              clipRule="evenodd"
+                                            />
+                                          </svg>
+                                        </div>
+                                        <div>
+                                          <div className="font-medium text-gray-900 truncate max-w-[400px] mb-1">
+                                            {
+                                              representativeDocument.document_name
+                                            }
+                                          </div>
+                                          <div className="text-xs text-gray-500">
+                                            Target Format:{" "}
+                                            {
+                                              representativeDocument
+                                                .output_format.format_name
+                                            }{" "}
+                                            (
+                                            {
+                                              representativeDocument
+                                                .output_format.format_extension
+                                            }
+                                            ) • ID:{" "}
+                                            {representativeDocument.document_id.slice(
+                                              0,
+                                              8
+                                            )}
+                                            ...
+                                            {templateName && (
+                                              <span>
+                                                {" "}
+                                                • Template: {templateName}
+                                              </span>
+                                            )}
+                                            {fileGroupDocuments.length > 1 && (
+                                              <span>
+                                                {" "}
+                                                • {
+                                                  fileGroupDocuments.length
+                                                }{" "}
+                                                related files
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="p-4">
+                                      <Badge
+                                        variant={getStatusBadgeVariant(
+                                          representativeDocument.processing_status
+                                        )}
+                                      >
+                                        {representativeDocument.processing_status
+                                          .charAt(0)
+                                          .toUpperCase() +
+                                          representativeDocument.processing_status.slice(
+                                            1
+                                          )}
+                                      </Badge>
+                                    </td>
+                                    <td className="p-4">
+                                      <div className="text-sm text-gray-900">
+                                        {templateName || "Default"}
+                                      </div>
+                                    </td>
+                                    <td className="p-4">
+                                      <div className="text-sm text-gray-900">
+                                        {
+                                          representativeDocument.output_format
+                                            .format_name
+                                        }{" "}
+                                        Form
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {
+                                          representativeDocument.output_format
+                                            .format_extension
+                                        }
+                                      </div>
+                                    </td>
+                                    <td className="p-4">
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            downloadDocument(
+                                              representativeDocument.document_id,
+                                              representativeDocument.document_name
+                                            );
+                                          }}
+                                          className="inline-flex items-center"
+                                          title="Download original document"
+                                        >
+                                          <svg
+                                            className="w-4 h-4 mr-1"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                            />
+                                          </svg>
+                                          Download
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              }
+                            )}
+
+                            {/* Show one processed file for the entire group */}
+                            {(() => {
+                              // Get all processed files for documents in this group using the new structure
+                              const allProcessedFiles =
+                                getAllProcessedFilesForGroup(groupDocuments);
+
+                              // Show processed files if any exist (limit to first 2)
+                              if (allProcessedFiles.length > 0) {
+                                const displayedFiles = allProcessedFiles.slice(
+                                  0,
+                                  2
+                                );
+                                const templateName = getTemplateName(
+                                  groupDocuments[0]
+                                );
+                                return displayedFiles.map(
+                                  (processedFile, index) => (
                                     <tr
-                                      key={representativeDocument.document_id}
-                                      className="hover:bg-gray-25 transition-colors"
+                                      key={`group-processed-${index}`}
+                                      className="bg-green-25 hover:bg-green-50 transition-colors border-l-4 border-green-500"
                                     >
-                                      <td className="p-4">
+                                      <td className="p-4 pl-8">
                                         <div className="flex items-center gap-3">
-                                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center">
+                                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
                                             <svg
-                                              className="w-4 h-4 text-blue-600"
+                                              className="w-4 h-4 text-green-600"
                                               fill="currentColor"
                                               viewBox="0 0 20 20"
                                             >
                                               <path
                                                 fillRule="evenodd"
-                                                d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                                                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
                                                 clipRule="evenodd"
                                               />
                                             </svg>
                                           </div>
                                           <div>
-                                            <div className="font-medium text-gray-900 truncate max-w-[400px] mb-1">
-                                              {
-                                                representativeDocument.document_name
-                                              }
+                                            <div className="font-medium text-green-900 truncate max-w-[400px] mb-1">
+                                              {processedFile.filename}
                                             </div>
-                                            <div className="text-xs text-gray-500">
-                                              Target Format:{" "}
-                                              {
-                                                representativeDocument
-                                                  .output_format.format_name
-                                              }{" "}
-                                              (
-                                              {
-                                                representativeDocument
-                                                  .output_format.format_extension
-                                              }
-                                              ) • ID:{" "}
-                                              {representativeDocument.document_id.slice(
-                                                0,
-                                                8
-                                              )}
-                                              ...
-                                              {templateName && (
-                                                <span>
-                                                  {" "}
-                                                  • Template: {templateName}
-                                                </span>
-                                              )}
-                                              {fileGroupDocuments.length > 1 && (
+                                            <div className="text-xs text-green-600">
+                                              Processed Output •{" "}
+                                              {(
+                                                processedFile.size /
+                                                1024 /
+                                                1024
+                                              ).toFixed(2)}{" "}
+                                              MB
+                                              {allProcessedFiles.length > 1 && (
                                                 <span>
                                                   {" "}
                                                   • {
-                                                    fileGroupDocuments.length
+                                                    allProcessedFiles.length
                                                   }{" "}
-                                                  related files
+                                                  processed files available
+                                                  {allProcessedFiles.length >
+                                                    2 &&
+                                                    index === 1 && (
+                                                      <span>
+                                                        {" "}
+                                                        (showing first 2)
+                                                      </span>
+                                                    )}
                                                 </span>
                                               )}
                                             </div>
@@ -2054,51 +2300,44 @@ function DocumentsPage() {
                                       </td>
                                       <td className="p-4">
                                         <Badge
-                                          variant={getStatusBadgeVariant(
-                                            representativeDocument.processing_status
-                                          )}
+                                          variant="default"
+                                          className="bg-green-100 text-green-800 border-green-200"
                                         >
-                                          {representativeDocument.processing_status
-                                            .charAt(0)
-                                            .toUpperCase() +
-                                            representativeDocument.processing_status.slice(
-                                              1
-                                            )}
+                                          Processed
                                         </Badge>
                                       </td>
                                       <td className="p-4">
-                                        <div className="text-sm text-gray-900">
+                                        <div className="text-sm text-green-900">
                                           {templateName || "Default"}
                                         </div>
                                       </td>
                                       <td className="p-4">
-                                        <div className="text-sm text-gray-900">
+                                        <div className="text-sm text-green-900">
                                           {
-                                            representativeDocument.output_format
-                                              .format_name
+                                            groupDocuments[0]?.output_format
+                                              ?.format_name
                                           }{" "}
                                           Form
                                         </div>
-                                        <div className="text-xs text-gray-500">
-                                          {
-                                            representativeDocument.output_format
-                                              .format_extension
-                                          }
+                                        <div className="text-xs text-green-600">
+                                          {groupDocuments[0]?.output_format
+                                            ?.format_extension || "Output File"}
                                         </div>
                                       </td>
                                       <td className="p-4">
                                         <div className="flex gap-2">
                                           <Button
+                                            variant="default"
                                             size="sm"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              downloadDocument(
-                                                representativeDocument.document_id,
-                                                representativeDocument.document_name
+                                              downloadProcessedFileDirectly(
+                                                processedFile.url,
+                                                processedFile.filename
                                               );
                                             }}
-                                            className="inline-flex items-center"
-                                            title="Download original document"
+                                            className="inline-flex items-center bg-green-600 hover:bg-green-700"
+                                            title="Download processed file"
                                           >
                                             <svg
                                               className="w-4 h-4 mr-1"
@@ -2118,120 +2357,200 @@ function DocumentsPage() {
                                         </div>
                                       </td>
                                     </tr>
-                                  );
-                                }
-                              )}
-
-                              {/* Show one processed file for the entire group */}
-                              {(() => {
-                                // Get all processed files for documents in this group using the new structure
-                                const allProcessedFiles =
-                                  getAllProcessedFilesForGroup(groupDocuments);
-
-                                // Show processed files if any exist (limit to first 2)
-                                if (allProcessedFiles.length > 0) {
-                                  const displayedFiles = allProcessedFiles.slice(
-                                    0,
-                                    2
-                                  );
+                                  )
+                                );
+                              } else {
+                                // Show Preview button if no processed files exist and group has session_id
+                                const sessionId = groupDocuments[0]?.session_id;
+                                if (sessionId) {
+                                  const isLoading =
+                                    previewLoading.has(sessionId);
+                                  const allProcessed =
+                                    areAllDocumentsProcessed(groupDocuments);
+                                  const hasFailed =
+                                    hasFailedDocuments(groupDocuments);
+                                  const hasCancelled =
+                                    hasCancelledDocuments(groupDocuments);
                                   const templateName = getTemplateName(
                                     groupDocuments[0]
                                   );
-                                  return displayedFiles.map(
-                                    (processedFile, index) => (
-                                      <tr
-                                        key={`group-processed-${index}`}
-                                        className="bg-green-25 hover:bg-green-50 transition-colors border-l-4 border-green-500"
-                                      >
-                                        <td className="p-4 pl-8">
-                                          <div className="flex items-center gap-3">
-                                            <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
-                                              <svg
-                                                className="w-4 h-4 text-green-600"
-                                                fill="currentColor"
-                                                viewBox="0 0 20 20"
-                                              >
+
+                                  return (
+                                    <tr
+                                      key={`group-preview-${sessionId}`}
+                                      className={`hover:bg-blue-50 transition-colors border-l-4 ${hasFailed
+                                          ? "bg-red-25 border-red-500"
+                                          : hasCancelled
+                                            ? "bg-orange-25 border-orange-500"
+                                            : "bg-blue-25 border-blue-500"
+                                        }`}
+                                    >
+                                      <td className="p-4 pl-8">
+                                        <div className="flex items-center gap-3">
+                                          <div
+                                            className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br rounded-lg flex items-center justify-center ${hasFailed
+                                                ? "from-red-100 to-red-200"
+                                                : hasCancelled
+                                                  ? "from-orange-100 to-orange-200"
+                                                  : "from-blue-100 to-blue-200"
+                                              }`}
+                                          >
+                                            <svg
+                                              className={`w-4 h-4 ${hasFailed
+                                                  ? "text-red-600"
+                                                  : hasCancelled
+                                                    ? "text-orange-600"
+                                                    : "text-blue-600"
+                                                }`}
+                                              fill="currentColor"
+                                              viewBox="0 0 20 20"
+                                            >
+                                              {hasFailed ? (
                                                 <path
                                                   fillRule="evenodd"
-                                                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                                                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
                                                   clipRule="evenodd"
                                                 />
-                                              </svg>
-                                            </div>
-                                            <div>
-                                              <div className="font-medium text-green-900 truncate max-w-[400px] mb-1">
-                                                {processedFile.filename}
-                                              </div>
-                                              <div className="text-xs text-green-600">
-                                                Processed Output •{" "}
-                                                {(
-                                                  processedFile.size /
-                                                  1024 /
-                                                  1024
-                                                ).toFixed(2)}{" "}
-                                                MB
-                                                {allProcessedFiles.length > 1 && (
-                                                  <span>
-                                                    {" "}
-                                                    • {
-                                                      allProcessedFiles.length
-                                                    }{" "}
-                                                    processed files available
-                                                    {allProcessedFiles.length >
-                                                      2 &&
-                                                      index === 1 && (
-                                                        <span>
-                                                          {" "}
-                                                          (showing first 2)
-                                                        </span>
-                                                      )}
-                                                  </span>
-                                                )}
-                                              </div>
-                                            </div>
+                                              ) : hasCancelled ? (
+                                                <path
+                                                  fillRule="evenodd"
+                                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                                  clipRule="evenodd"
+                                                />
+                                              ) : (
+                                                <path
+                                                  fillRule="evenodd"
+                                                  d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                                                  clipRule="evenodd"
+                                                />
+                                              )}
+                                            </svg>
                                           </div>
-                                        </td>
-                                        <td className="p-4">
-                                          <Badge
-                                            variant="default"
-                                            className="bg-green-100 text-green-800 border-green-200"
-                                          >
-                                            Processed
-                                          </Badge>
-                                        </td>
-                                        <td className="p-4">
-                                          <div className="text-sm text-green-900">
-                                            {templateName || "Default"}
-                                          </div>
-                                        </td>
-                                        <td className="p-4">
-                                          <div className="text-sm text-green-900">
-                                            {
-                                              groupDocuments[0]?.output_format
-                                                ?.format_name
-                                            }{" "}
-                                            Form
-                                          </div>
-                                          <div className="text-xs text-green-600">
-                                            {groupDocuments[0]?.output_format
-                                              ?.format_extension || "Output File"}
-                                          </div>
-                                        </td>
-                                        <td className="p-4">
-                                          <div className="flex gap-2">
-                                            <Button
-                                              variant="default"
-                                              size="sm"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                downloadProcessedFileDirectly(
-                                                  processedFile.url,
-                                                  processedFile.filename
-                                                );
-                                              }}
-                                              className="inline-flex items-center bg-green-600 hover:bg-green-700"
-                                              title="Download processed file"
+                                          <div>
+                                            <div
+                                              className={`font-medium truncate max-w-[400px] mb-1 ${hasFailed
+                                                  ? "text-red-900"
+                                                  : hasCancelled
+                                                    ? "text-orange-900"
+                                                    : "text-blue-900"
+                                                }`}
                                             >
+                                              {hasFailed
+                                                ? "Processing Failed"
+                                                : hasCancelled
+                                                  ? "Processing Cancelled"
+                                                  : "Generate Excel Files"}
+                                            </div>
+                                            <div
+                                              className={`text-xs ${hasFailed
+                                                  ? "text-red-600"
+                                                  : hasCancelled
+                                                    ? "text-orange-600"
+                                                    : "text-blue-600"
+                                                }`}
+                                            >
+                                              {hasFailed
+                                                ? "Some documents failed to process • Check individual document status"
+                                                : hasCancelled
+                                                  ? "Processing was cancelled by user request"
+                                                  : allProcessed
+                                                    ? "No processed files found • Click Preview to generate Excel files"
+                                                    : "Processing in progress • Please wait for completion"}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <td className="p-4">
+                                        <Badge
+                                          variant={
+                                            hasFailed
+                                              ? "destructive"
+                                              : hasCancelled
+                                                ? "secondary"
+                                                : allProcessed
+                                                  ? "secondary"
+                                                  : "outline"
+                                          }
+                                          className={
+                                            hasFailed
+                                              ? "bg-red-100 text-red-800 border-red-200"
+                                              : hasCancelled
+                                                ? "bg-orange-100 text-orange-800 border-orange-200"
+                                                : allProcessed
+                                                  ? "bg-blue-100 text-blue-800 border-blue-200"
+                                                  : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                          }
+                                        >
+                                          {hasFailed
+                                            ? "Failed"
+                                            : hasCancelled
+                                              ? "Cancelled"
+                                              : allProcessed
+                                                ? "Ready to Process"
+                                                : "Processing"}
+                                        </Badge>
+                                      </td>
+                                      <td className="p-4">
+                                        <div className="text-sm text-green-900">
+                                          {templateName || "Default"}
+                                        </div>
+                                      </td>
+                                      <td className="p-4">
+                                        <div className="text-sm text-green-900">
+                                          {
+                                            groupDocuments[0]?.output_format
+                                              ?.format_name
+                                          }{" "}
+                                          Form
+                                        </div>
+                                        <div className="text-xs text-green-600">
+                                          {groupDocuments[0]?.output_format
+                                            ?.format_extension || "Output File"}
+                                        </div>
+                                      </td>
+                                      <td className="p-4">
+                                        <div className="flex gap-2">
+                                          <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (hasFailed) {
+                                                // You could add a retry mechanism here
+                                                setMessage(
+                                                  "Some documents failed to process. Please check individual document status or try re-uploading the failed files."
+                                                );
+                                              } else if (!hasCancelled) {
+                                                // Only allow action if not cancelled
+                                                handlePreview(groupDocuments);
+                                              }
+                                            }}
+                                            disabled={
+                                              isLoading ||
+                                              hasCancelled ||
+                                              (!allProcessed && !hasFailed)
+                                            }
+                                            className={`inline-flex items-center disabled:opacity-50 ${hasFailed
+                                                ? "bg-red-600 hover:bg-red-700"
+                                                : hasCancelled
+                                                  ? "bg-gray-400 cursor-not-allowed"
+                                                  : allProcessed
+                                                    ? "bg-blue-600 hover:bg-blue-700"
+                                                    : "bg-gray-400 cursor-not-allowed"
+                                              }`}
+                                            title={
+                                              hasFailed
+                                                ? "Some documents failed to process"
+                                                : hasCancelled
+                                                  ? "Processing was cancelled - button disabled"
+                                                  : allProcessed
+                                                    ? "Generate Excel files for preview"
+                                                    : "Please wait for all documents to finish processing"
+                                            }
+                                          >
+                                            {isLoading ? (
+                                              <div className="animate-spin w-4 h-4 mr-1 border-2 border-white border-t-transparent rounded-full"></div>
+                                            ) : hasFailed ? (
                                               <svg
                                                 className="w-4 h-4 mr-1"
                                                 fill="none"
@@ -2242,281 +2561,69 @@ function DocumentsPage() {
                                                   strokeLinecap="round"
                                                   strokeLinejoin="round"
                                                   strokeWidth={2}
-                                                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
                                                 />
                                               </svg>
-                                              Download
-                                            </Button>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    )
-                                  );
-                                } else {
-                                  // Show Preview button if no processed files exist and group has session_id
-                                  const sessionId = groupDocuments[0]?.session_id;
-                                  if (sessionId) {
-                                    const isLoading =
-                                      previewLoading.has(sessionId);
-                                    const allProcessed =
-                                      areAllDocumentsProcessed(groupDocuments);
-                                    const hasFailed =
-                                      hasFailedDocuments(groupDocuments);
-                                    const hasCancelled =
-                                      hasCancelledDocuments(groupDocuments);
-                                    const templateName = getTemplateName(
-                                      groupDocuments[0]
-                                    );
-
-                                    return (
-                                      <tr
-                                        key={`group-preview-${sessionId}`}
-                                        className={`hover:bg-blue-50 transition-colors border-l-4 ${hasFailed
-                                          ? "bg-red-25 border-red-500"
-                                          : hasCancelled
-                                            ? "bg-orange-25 border-orange-500"
-                                            : "bg-blue-25 border-blue-500"
-                                          }`}
-                                      >
-                                        <td className="p-4 pl-8">
-                                          <div className="flex items-center gap-3">
-                                            <div
-                                              className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br rounded-lg flex items-center justify-center ${hasFailed
-                                                ? "from-red-100 to-red-200"
-                                                : hasCancelled
-                                                  ? "from-orange-100 to-orange-200"
-                                                  : "from-blue-100 to-blue-200"
-                                                }`}
-                                            >
+                                            ) : hasCancelled ? (
                                               <svg
-                                                className={`w-4 h-4 ${hasFailed
-                                                  ? "text-red-600"
-                                                  : hasCancelled
-                                                    ? "text-orange-600"
-                                                    : "text-blue-600"
-                                                  }`}
-                                                fill="currentColor"
-                                                viewBox="0 0 20 20"
+                                                className="w-4 h-4 mr-1"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
                                               >
-                                                {hasFailed ? (
-                                                  <path
-                                                    fillRule="evenodd"
-                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                                    clipRule="evenodd"
-                                                  />
-                                                ) : hasCancelled ? (
-                                                  <path
-                                                    fillRule="evenodd"
-                                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                                    clipRule="evenodd"
-                                                  />
-                                                ) : (
-                                                  <path
-                                                    fillRule="evenodd"
-                                                    d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
-                                                    clipRule="evenodd"
-                                                  />
-                                                )}
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                />
                                               </svg>
-                                            </div>
-                                            <div>
-                                              <div
-                                                className={`font-medium truncate max-w-[400px] mb-1 ${hasFailed
-                                                  ? "text-red-900"
-                                                  : hasCancelled
-                                                    ? "text-orange-900"
-                                                    : "text-blue-900"
-                                                  }`}
+                                            ) : (
+                                              <svg
+                                                className="w-4 h-4 mr-1"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
                                               >
-                                                {hasFailed
-                                                  ? "Processing Failed"
-                                                  : hasCancelled
-                                                    ? "Processing Cancelled"
-                                                    : "Generate Excel Files"}
-                                              </div>
-                                              <div
-                                                className={`text-xs ${hasFailed
-                                                  ? "text-red-600"
-                                                  : hasCancelled
-                                                    ? "text-orange-600"
-                                                    : "text-blue-600"
-                                                  }`}
-                                              >
-                                                {hasFailed
-                                                  ? "Some documents failed to process • Check individual document status"
-                                                  : hasCancelled
-                                                    ? "Processing was cancelled by user request"
-                                                    : allProcessed
-                                                      ? "No processed files found • Click Preview to generate Excel files"
-                                                      : "Processing in progress • Please wait for completion"}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td className="p-4">
-                                          <Badge
-                                            variant={
-                                              hasFailed
-                                                ? "destructive"
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                />
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                />
+                                              </svg>
+                                            )}
+                                            {isLoading
+                                              ? "Opening..."
+                                              : hasFailed
+                                                ? "Failed"
                                                 : hasCancelled
-                                                  ? "secondary"
+                                                  ? "Cancelled"
                                                   : allProcessed
-                                                    ? "secondary"
-                                                    : "outline"
-                                            }
-                                            className={
-                                              hasFailed
-                                                ? "bg-red-100 text-red-800 border-red-200"
-                                                : hasCancelled
-                                                  ? "bg-orange-100 text-orange-800 border-orange-200"
-                                                  : allProcessed
-                                                    ? "bg-blue-100 text-blue-800 border-blue-200"
-                                                    : "bg-yellow-100 text-yellow-800 border-yellow-200"
-                                            }
-                                          >
-                                            {hasFailed
-                                              ? "Failed"
-                                              : hasCancelled
-                                                ? "Cancelled"
-                                                : allProcessed
-                                                  ? "Ready to Process"
-                                                  : "Processing"}
-                                          </Badge>
-                                        </td>
-                                        <td className="p-4">
-                                          <div className="text-sm text-green-900">
-                                            {templateName || "Default"}
-                                          </div>
-                                        </td>
-                                        <td className="p-4">
-                                          <div className="text-sm text-green-900">
-                                            {
-                                              groupDocuments[0]?.output_format
-                                                ?.format_name
-                                            }{" "}
-                                            Form
-                                          </div>
-                                          <div className="text-xs text-green-600">
-                                            {groupDocuments[0]?.output_format
-                                              ?.format_extension || "Output File"}
-                                          </div>
-                                        </td>
-                                        <td className="p-4">
-                                          <div className="flex gap-2">
-                                            <Button
-                                              variant="default"
-                                              size="sm"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (hasFailed) {
-                                                  // You could add a retry mechanism here
-                                                  setMessage(
-                                                    "Some documents failed to process. Please check individual document status or try re-uploading the failed files."
-                                                  );
-                                                } else if (!hasCancelled) {
-                                                  // Only allow action if not cancelled
-                                                  handlePreview(groupDocuments);
-                                                }
-                                              }}
-                                              disabled={
-                                                isLoading ||
-                                                hasCancelled ||
-                                                (!allProcessed && !hasFailed)
-                                              }
-                                              className={`inline-flex items-center disabled:opacity-50 ${hasFailed
-                                                ? "bg-red-600 hover:bg-red-700"
-                                                : hasCancelled
-                                                  ? "bg-gray-400 cursor-not-allowed"
-                                                  : allProcessed
-                                                    ? "bg-blue-600 hover:bg-blue-700"
-                                                    : "bg-gray-400 cursor-not-allowed"
-                                                }`}
-                                              title={
-                                                hasFailed
-                                                  ? "Some documents failed to process"
-                                                  : hasCancelled
-                                                    ? "Processing was cancelled - button disabled"
-                                                    : allProcessed
-                                                      ? "Generate Excel files for preview"
-                                                      : "Please wait for all documents to finish processing"
-                                              }
-                                            >
-                                              {isLoading ? (
-                                                <div className="animate-spin w-4 h-4 mr-1 border-2 border-white border-t-transparent rounded-full"></div>
-                                              ) : hasFailed ? (
-                                                <svg
-                                                  className="w-4 h-4 mr-1"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  viewBox="0 0 24 24"
-                                                >
-                                                  <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
-                                                  />
-                                                </svg>
-                                              ) : hasCancelled ? (
-                                                <svg
-                                                  className="w-4 h-4 mr-1"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  viewBox="0 0 24 24"
-                                                >
-                                                  <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                                  />
-                                                </svg>
-                                              ) : (
-                                                <svg
-                                                  className="w-4 h-4 mr-1"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  viewBox="0 0 24 24"
-                                                >
-                                                  <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                  />
-                                                  <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                  />
-                                                </svg>
-                                              )}
-                                              {isLoading
-                                                ? "Opening..."
-                                                : hasFailed
-                                                  ? "Failed"
-                                                  : hasCancelled
-                                                    ? "Cancelled"
-                                                    : allProcessed
-                                                      ? "Preview"
-                                                      : "Processing..."}
-                                            </Button>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  }
+                                                    ? "Preview"
+                                                    : "Processing..."}
+                                          </Button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
                                 }
-                                return null;
-                              })()}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                              }
+                              return null;
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             // Processed Documents View
@@ -2566,7 +2673,16 @@ function DocumentsPage() {
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                              processedFile.filename.includes('_batch_result_') && processedFile.filename.endsWith('.json')
+                                ? 'bg-gradient-to-br from-purple-100 to-purple-200'
+                                : 'bg-gradient-to-br from-green-100 to-green-200'
+                            }`}>
+                              {processedFile.filename.includes('_batch_result_') && processedFile.filename.endsWith('.json') ? (
+                                <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              ) : (
                               <svg
                                 className="w-4 h-4 text-green-600"
                                 fill="currentColor"
@@ -2578,10 +2694,16 @@ function DocumentsPage() {
                                   clipRule="evenodd"
                                 />
                               </svg>
+                              )}
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900 truncate max-w-[400px] mb-1">
+                              <div className="font-medium text-gray-900 truncate max-w-[400px] mb-1 flex items-center gap-2">
                                 {processedFile.filename}
+                                {processedFile.filename.includes('_batch_result_') && !processedFile.filename.endsWith('_batch_result.json') && (
+                                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 rounded-full">
+                                    SPLIT
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-gray-500">
                                 From:{" "}
