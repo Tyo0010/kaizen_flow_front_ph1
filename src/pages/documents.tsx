@@ -1542,7 +1542,7 @@ function DocumentsPage() {
                       credits
                     </div>
                     <div>
-                      Normalization factor: /2
+                      Normalization factor: /3
                     </div>
                   </div>
                 </div>

@@ -105,7 +105,7 @@ interface JobCargoItem {
   countryOfOrigin_confidence?: number;
   hsCode: string;
   hsCode_confidence?: number;
-  statisticalUOM: StatisticalUOM[];
+  statisticalUOM: StatisticalUOM[] | string | null;
   statisticalQty: number;
   statisticalQty_confidence?: number;
   declaredQty: number;
@@ -342,6 +342,33 @@ const parseStatisticalDetailsString = (value: string): StatisticalUOM[] => {
     });
 };
 
+const normalizeStatisticalEntries = (value: unknown): StatisticalUOM[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .filter((entry) => entry !== null && entry !== undefined)
+      .map((entry: any) => ({
+        UOM: normalizeStringValue(entry?.UOM),
+        quantity: isNaN(Number(entry?.quantity)) ? 0 : Number(entry?.quantity),
+        confidence: entry?.confidence,
+      }));
+  }
+  if (typeof value === "string") {
+    return parseStatisticalDetailsString(value);
+  }
+  if (typeof value === "object") {
+    const entry: any = value;
+    return [
+      {
+        UOM: normalizeStringValue(entry?.UOM),
+        quantity: isNaN(Number(entry?.quantity)) ? 0 : Number(entry?.quantity),
+        confidence: entry?.confidence,
+      },
+    ];
+  }
+  return [];
+};
+
 const normalizeStringValue = (value?: string | number | null): string => {
   if (value === undefined || value === null) return "";
   return String(value).trim();
@@ -569,11 +596,7 @@ const convertUIDataToAPI = (
         items: entry.items
           ? entry.items.map((item: JobCargoItem) => ({
               ...item,
-              statisticalUOM: item.statisticalUOM
-                ? item.statisticalUOM.map((detail: StatisticalUOM) => ({
-                    ...detail,
-                  }))
-                : [],
+              statisticalUOM: normalizeStatisticalEntries(item.statisticalUOM),
             }))
           : [],
       })
@@ -852,7 +875,7 @@ const convertUIDataToAPI = (
         updatedItem.packUOMToBeReleased_confidence =
           uiItem.packUOMToBeReleased_confidence;
 
-        const statsEntries: StatisticalUOM[] =
+        const rawStats =
           (uiItem.statisticalEntries &&
             uiItem.statisticalEntries.length > 0 &&
             uiItem.statisticalEntries) ||
@@ -860,6 +883,8 @@ const convertUIDataToAPI = (
           (uiItem.statisticalDetails
             ? parseStatisticalDetailsString(uiItem.statisticalDetails)
             : []);
+        const statsEntries: StatisticalUOM[] =
+          normalizeStatisticalEntries(rawStats);
 
         updatedItem.statisticalUOM = statsEntries
           ? statsEntries.map((detail: StatisticalUOM) => ({
