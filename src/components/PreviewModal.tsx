@@ -105,7 +105,8 @@ interface JobCargoItem {
   countryOfOrigin_confidence?: number;
   hsCode: string;
   hsCode_confidence?: number;
-  statisticalUOM: StatisticalUOM[] | string | null;
+  statisticalUOM: string;
+  statisticalUOM_confidence?: number;
   statisticalQty: number;
   statisticalQty_confidence?: number;
   declaredQty: number;
@@ -342,31 +343,19 @@ const parseStatisticalDetailsString = (value: string): StatisticalUOM[] => {
     });
 };
 
-const normalizeStatisticalEntries = (value: unknown): StatisticalUOM[] => {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value
-      .filter((entry) => entry !== null && entry !== undefined)
-      .map((entry: any) => ({
-        UOM: normalizeStringValue(entry?.UOM),
-        quantity: isNaN(Number(entry?.quantity)) ? 0 : Number(entry?.quantity),
-        confidence: entry?.confidence,
-      }));
-  }
+const normalizeStatisticalUOMString = (value: unknown): string => {
   if (typeof value === "string") {
-    return parseStatisticalDetailsString(value);
+    return value.trim();
   }
-  if (typeof value === "object") {
+  if (Array.isArray(value)) {
+    const first = value.find(Boolean) as any;
+    return normalizeStringValue(first?.UOM);
+  }
+  if (typeof value === "object" && value) {
     const entry: any = value;
-    return [
-      {
-        UOM: normalizeStringValue(entry?.UOM),
-        quantity: isNaN(Number(entry?.quantity)) ? 0 : Number(entry?.quantity),
-        confidence: entry?.confidence,
-      },
-    ];
+    return normalizeStringValue(entry?.UOM);
   }
-  return [];
+  return "";
 };
 
 const normalizeStringValue = (value?: string | number | null): string => {
@@ -596,7 +585,7 @@ const convertUIDataToAPI = (
         items: entry.items
           ? entry.items.map((item: JobCargoItem) => ({
               ...item,
-              statisticalUOM: normalizeStatisticalEntries(item.statisticalUOM),
+              statisticalUOM: normalizeStatisticalUOMString(item.statisticalUOM),
             }))
           : [],
       })
@@ -875,24 +864,26 @@ const convertUIDataToAPI = (
         updatedItem.packUOMToBeReleased_confidence =
           uiItem.packUOMToBeReleased_confidence;
 
-        const rawStats =
-          (uiItem.statisticalEntries &&
-            uiItem.statisticalEntries.length > 0 &&
-            uiItem.statisticalEntries) ||
-          rawItem.statisticalUOM ||
-          (uiItem.statisticalDetails
-            ? parseStatisticalDetailsString(uiItem.statisticalDetails)
-            : []);
-        const statsEntries: StatisticalUOM[] =
-          normalizeStatisticalEntries(rawStats);
-
-        updatedItem.statisticalUOM = statsEntries
-          ? statsEntries.map((detail: StatisticalUOM) => ({
-              UOM: detail.UOM || "",
-              quantity: toNumber(detail.quantity),
-              confidence: detail.confidence,
-            }))
+        const parsedStats = uiItem.statisticalDetails
+          ? parseStatisticalDetailsString(uiItem.statisticalDetails)
           : [];
+        const fallbackUomFromDetails =
+          parsedStats.length > 0 ? parsedStats[0].UOM : "";
+        const fallbackUomFromEntries =
+          uiItem.statisticalEntries && uiItem.statisticalEntries.length > 0
+            ? uiItem.statisticalEntries[0].UOM
+            : "";
+
+        updatedItem.statisticalUOM =
+          normalizeStringValue(uiItem.statisticalUOM) ||
+          normalizeStringValue(rawItem.statisticalUOM) ||
+          normalizeStringValue(fallbackUomFromEntries) ||
+          normalizeStringValue(fallbackUomFromDetails);
+        updatedItem.statisticalUOM_confidence =
+          uiItem.statisticalUOM_confidence ??
+          rawItem.statisticalUOM_confidence ??
+          uiItem.statisticalQty_confidence ??
+          rawItem.statisticalQty_confidence;
 
         return updatedItem;
       });
@@ -1016,12 +1007,9 @@ const convertUIDataToAPI = (
       countryOfOrigin_confidence: item.countryOfOrigin_confidence,
       hsCode: item.hsCode,
       hsCode_confidence: item.hsCode_confidence,
-      statisticalUOM: [
-        {
-          UOM: item.statisticalUOM,
-          quantity: item.statisticalQty,
-        },
-      ],
+      statisticalUOM: item.statisticalUOM || "",
+      statisticalUOM_confidence:
+        item.statisticalUOM_confidence ?? item.statisticalQty_confidence,
       statisticalQty: item.statisticalQty,
       statisticalQty_confidence: item.statisticalQty_confidence,
       declaredQty: item.declaredQty,

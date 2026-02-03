@@ -243,7 +243,8 @@ interface JobCargoItem {
   countryOfOrigin_confidence?: number;
   hsCode: string;
   hsCode_confidence?: number;
-  statisticalUOM: StatisticalEntry[];
+  statisticalUOM: string;
+  statisticalUOM_confidence?: number;
   statisticalQty: number;
   statisticalQty_confidence?: number;
   declaredQty: number;
@@ -701,14 +702,44 @@ function DocumentsPage() {
     dataArray.forEach((dataItem, dataIndex) => {
       if (dataItem.items && Array.isArray(dataItem.items)) {
         dataItem.items.forEach((item, itemIndex) => {
-          const statisticalEntries =
-            item.statisticalUOM && Array.isArray(item.statisticalUOM)
-              ? item.statisticalUOM.map((uom) => ({
+          const baseStatisticalEntries = Array.isArray(item.statisticalUOM)
+            ? item.statisticalUOM.map((uom) => ({
                 UOM: uom.UOM,
                 quantity: uom.quantity,
                 confidence: uom.confidence,
               }))
-              : [];
+            : [];
+          const statisticalUOMString =
+            typeof item.statisticalUOM === "string"
+              ? item.statisticalUOM.trim()
+              : "";
+
+          const derivedStatisticalQty =
+            item.statisticalQty ??
+            baseStatisticalEntries[0]?.quantity ??
+            item.declaredQty ??
+            0;
+          const derivedStatisticalUOM =
+            baseStatisticalEntries[0]?.UOM ||
+            statisticalUOMString ||
+            item.declaredUOM ||
+            "";
+          const derivedStatisticalUOMConfidence =
+            item.statisticalUOM_confidence ??
+            baseStatisticalEntries[0]?.confidence ??
+            item.statisticalQty_confidence;
+          const statisticalEntries =
+            baseStatisticalEntries.length > 0
+              ? baseStatisticalEntries
+              : derivedStatisticalUOM
+                ? [
+                    {
+                      UOM: derivedStatisticalUOM,
+                      quantity: derivedStatisticalQty,
+                      confidence: derivedStatisticalUOMConfidence,
+                    },
+                  ]
+                : [];
           const statisticalDetailsDisplay =
             formatStatisticalDetailsForDisplay(statisticalEntries);
 
@@ -734,14 +765,6 @@ function DocumentsPage() {
             });
           }
 
-          const derivedStatisticalQty =
-            item.statisticalQty ??
-            statisticalEntries[0]?.quantity ??
-            item.declaredQty ??
-            0;
-          const derivedStatisticalUOM =
-            statisticalEntries[0]?.UOM || item.declaredUOM || "";
-
           allItems.push({
             id: `${dataIndex}-${itemIndex}`,
             countryOfOrigin: item.countryOfOrigin || "",
@@ -763,13 +786,13 @@ function DocumentsPage() {
             statisticalQty: derivedStatisticalQty || 0,
             statisticalQty_confidence: item.statisticalQty_confidence,
             statisticalUOM: derivedStatisticalUOM,
-            statisticalUOM_confidence: item.statisticalQty_confidence,
+            statisticalUOM_confidence: derivedStatisticalUOMConfidence,
             productCode: item.productCode || "",
             productCode_confidence: item.productCode_confidence,
             extraDescription: item.extraDescription || "",
             extraDescription_confidence: item.extraDescription_confidence,
             statisticalDetails: statisticalDetailsDisplay,
-            statisticalDetails_confidence: item.statisticalQty_confidence,
+            statisticalDetails_confidence: derivedStatisticalUOMConfidence,
             statisticalEntries,
             sourceDataIndex: dataIndex,
             sourceItemIndex: itemIndex,
