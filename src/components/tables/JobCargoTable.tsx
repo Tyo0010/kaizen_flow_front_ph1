@@ -1,12 +1,6 @@
 import React from 'react'
 import { Input } from '../ui/input'
 
-type TableStatisticalEntry = {
-  UOM: string;
-  quantity: number;
-  confidence?: number;
-};
-
 // Interfaces
 export interface DisplayJobCargoItem {
   id: string;
@@ -36,7 +30,7 @@ export interface DisplayJobCargoItem {
   extraDescription_confidence?: number;
   statisticalDetails?: string;
   statisticalDetails_confidence?: number;
-  statisticalEntries?: TableStatisticalEntry[];
+  statisticalEntries?: string;
   sourceDataIndex?: number;
   sourceItemIndex?: number;
   // K9 Form specific fields

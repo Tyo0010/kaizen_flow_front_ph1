@@ -12,6 +12,7 @@ import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
 import { updateProcessedData, generateExcelFiles } from "../utils/api";
+import { withCanonicalFromUiValues } from "../utils/uomQtyAdapter";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DynamicJobCargoTable,
@@ -20,11 +21,6 @@ import {
 } from "./tables";
 
 // Interfaces
-interface StatisticalUOM {
-  UOM: string;
-  quantity: number;
-  confidence?: number;
-}
 
 interface ProcessedDataItem {
   invoiceNumber: string | string[];
@@ -106,7 +102,6 @@ interface JobCargoItem {
   hsCode: string;
   hsCode_confidence?: number;
   statisticalUOM: string;
-  statisticalUOM_confidence?: number;
   statisticalQty: number;
   statisticalQty_confidence?: number;
   declaredQty: number;
@@ -220,7 +215,7 @@ interface SealnetJobCargoItem {
   declaredUOM?: string;
   declaredUOM_confidence?: number;
   statisticalDetails?: string;
-  statisticalEntries?: StatisticalUOM[];
+  statisticalEntries?: string;
   itemAmount?: number;
   itemAmount_confidence?: number;
   itemDescription?: string;
@@ -326,37 +321,7 @@ const parseInvoiceNumbers = (invoiceNumberString: string): string[] => {
   return invoiceNumberString.split(",").map(num => num.trim()).filter(num => num.length > 0);
 };
 
-const parseStatisticalDetailsString = (value: string): StatisticalUOM[] => {
-  if (!value) return [];
-  return value
-    .split(",")
-    .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0)
-    .map((segment) => {
-      const parts = segment.split(/\s+/);
-      const uom = parts.pop() || "";
-      const qty = parseFloat(parts.join(" "));
-      return {
-        UOM: uom,
-        quantity: isNaN(qty) ? 0 : qty,
-      };
-    });
-};
 
-const normalizeStatisticalUOMString = (value: unknown): string => {
-  if (typeof value === "string") {
-    return value.trim();
-  }
-  if (Array.isArray(value)) {
-    const first = value.find(Boolean) as any;
-    return normalizeStringValue(first?.UOM);
-  }
-  if (typeof value === "object" && value) {
-    const entry: any = value;
-    return normalizeStringValue(entry?.UOM);
-  }
-  return "";
-};
 
 const normalizeStringValue = (value?: string | number | null): string => {
   if (value === undefined || value === null) return "";
@@ -585,11 +550,13 @@ const convertUIDataToAPI = (
         items: entry.items
           ? entry.items.map((item: JobCargoItem) => ({
               ...item,
-              statisticalUOM: normalizeStatisticalUOMString(item.statisticalUOM),
+                
             }))
           : [],
       })
     );
+    // a1: merge obj 
+// Error generating Excel files: w.statisticalUOM.map is not a function. pred statuom not an arr. ts doesnt enforce runtime type
 
     const general = uiData.generalInformation;
     const normalizedInvoice =
@@ -864,28 +831,35 @@ const convertUIDataToAPI = (
         updatedItem.packUOMToBeReleased_confidence =
           uiItem.packUOMToBeReleased_confidence;
 
-        const parsedStats = uiItem.statisticalDetails
-          ? parseStatisticalDetailsString(uiItem.statisticalDetails)
-          : [];
-        const fallbackUomFromDetails =
-          parsedStats.length > 0 ? parsedStats[0].UOM : "";
-        const fallbackUomFromEntries =
-          uiItem.statisticalEntries && uiItem.statisticalEntries.length > 0
-            ? uiItem.statisticalEntries[0].UOM
-            : "";
+        const statsEntries: string =
+          (uiItem.statisticalEntries &&
+            uiItem.statisticalEntries.length > 0 &&
+            uiItem.statisticalEntries) ||
+          uiItem.statisticalUOM ||
+          rawItem.statisticalUOM ||
+          (uiItem.statisticalDetails ?? '');
 
-        updatedItem.statisticalUOM =
-          normalizeStringValue(uiItem.statisticalUOM) ||
-          normalizeStringValue(rawItem.statisticalUOM) ||
-          normalizeStringValue(fallbackUomFromEntries) ||
-          normalizeStringValue(fallbackUomFromDetails);
-        updatedItem.statisticalUOM_confidence =
-          uiItem.statisticalUOM_confidence ??
-          rawItem.statisticalUOM_confidence ??
+        const rawDataEntry = Array.isArray((rawItem as any).data)
+          ? (rawItem as any).data[0]
+          : (rawItem as any).data;
+        const canonicalQty =
+          uiItem.statisticalQty ??
+          uiItem.declaredQty ??
+          rawDataEntry?.quantity ??
+          rawDataEntry?.qty;
+        const canonicalConfidence =
           uiItem.statisticalQty_confidence ??
-          rawItem.statisticalQty_confidence;
+          uiItem.declaredQty_confidence;
 
-        return updatedItem;
+        return withCanonicalFromUiValues(
+          updatedItem,
+          statsEntries ||
+            uiItem.declaredUOM ||
+            rawDataEntry?.UOM ||
+            rawDataEntry?.uom,
+          canonicalQty,
+          canonicalConfidence
+        ) as unknown as JobCargoItem;
       });
     });
 
@@ -1002,38 +976,55 @@ const convertUIDataToAPI = (
     "rob/rocForConsignor": uiData.generalInformation.robRocForConsignor || null,
     "rob/rocForConsignor_confidence":
       uiData.generalInformation.robRocForConsignor_confidence,
-    items: uiData.jobCargo.items.map((item) => ({
-      countryOfOrigin: item.countryOfOrigin,
-      countryOfOrigin_confidence: item.countryOfOrigin_confidence,
-      hsCode: item.hsCode,
-      hsCode_confidence: item.hsCode_confidence,
-      statisticalUOM: item.statisticalUOM || "",
-      statisticalUOM_confidence:
-        item.statisticalUOM_confidence ?? item.statisticalQty_confidence,
-      statisticalQty: item.statisticalQty,
-      statisticalQty_confidence: item.statisticalQty_confidence,
-      declaredQty: item.declaredQty,
-      declaredQty_confidence: item.declaredQty_confidence,
-      declaredUOM: item.declaredUOM,
-      declaredUOM_confidence: item.declaredUOM_confidence,
-      itemAmount: item.itemAmount,
-      itemAmount_confidence: item.itemAmount_confidence,
-      itemDescription: item.itemDescription,
-      itemDescription_confidence: item.itemDescription_confidence,
-      itemDescription2: item.itemDescription2,
-      itemDescription2_confidence: item.itemDescription2_confidence,
-      itemDescription3: item.itemDescription3,
-      itemDescription3_confidence: item.itemDescription3_confidence,
-      // K9-specific fields (optional)
-      ...(item.packQtyToBeReleased !== undefined && {
-        packQtyToBeReleased: item.packQtyToBeReleased,
-        packQtyToBeReleased_confidence: item.packQtyToBeReleased_confidence,
-      }),
-      ...(item.packUOMToBeReleased !== undefined && {
-        packUOMToBeReleased: item.packUOMToBeReleased,
-        packUOMToBeReleased_confidence: item.packUOMToBeReleased_confidence,
-      }),
-    })),
+    items: uiData.jobCargo.items.map((item) => {
+      const baseItem: Record<string, unknown> = {
+        countryOfOrigin: item.countryOfOrigin,
+        countryOfOrigin_confidence: item.countryOfOrigin_confidence,
+        hsCode: item.hsCode,
+        hsCode_confidence: item.hsCode_confidence,
+        statisticalUOM: item.statisticalUOM,
+        statisticalQty: item.statisticalQty,
+        statisticalQty_confidence: item.statisticalQty_confidence,
+        declaredQty: item.declaredQty,
+        declaredQty_confidence: item.declaredQty_confidence,
+        declaredUOM: item.declaredUOM,
+        declaredUOM_confidence: item.declaredUOM_confidence,
+        itemAmount: item.itemAmount,
+        itemAmount_confidence: item.itemAmount_confidence,
+        itemDescription: item.itemDescription,
+        itemDescription_confidence: item.itemDescription_confidence,
+        itemDescription2: item.itemDescription2,
+        itemDescription2_confidence: item.itemDescription2_confidence,
+        itemDescription3: item.itemDescription3,
+        itemDescription3_confidence: item.itemDescription3_confidence,
+        ...(item.packQtyToBeReleased !== undefined && {
+          packQtyToBeReleased: item.packQtyToBeReleased,
+          packQtyToBeReleased_confidence: item.packQtyToBeReleased_confidence,
+        }),
+        ...(item.packUOMToBeReleased !== undefined && {
+          packUOMToBeReleased: item.packUOMToBeReleased,
+          packUOMToBeReleased_confidence: item.packUOMToBeReleased_confidence,
+        }),
+      };
+
+      const existingDataEntry = Array.isArray((item as any).data)
+        ? (item as any).data[0]
+        : (item as any).data;
+
+      return withCanonicalFromUiValues(
+        baseItem,
+        item.statisticalEntries ||
+          item.statisticalUOM ||
+          item.declaredUOM ||
+          existingDataEntry?.UOM ||
+          existingDataEntry?.uom,
+        item.statisticalQty ??
+          item.declaredQty ??
+          existingDataEntry?.quantity ??
+          existingDataEntry?.qty,
+        item.statisticalQty_confidence ?? item.declaredQty_confidence
+      ) as unknown as JobCargoItem;
+    }),
   };
 
   return [apiDataItem];
@@ -1521,9 +1512,10 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
     };
 
     if (field === "statisticalDetails") {
-      nextItem.statisticalEntries = parseStatisticalDetailsString(
-        String(value)
-      );
+      nextItem.statisticalEntries = String(value)
+    //   parseStatisticalDetailsString(
+    //     String(value)
+    //   );
     }
 
     updatedItems[itemIndex] = nextItem;

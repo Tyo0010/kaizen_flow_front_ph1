@@ -38,6 +38,7 @@ import {
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
 import { PreviewModal } from "../components/PreviewModal";
+import { getCanonicalUomQty, withLegacyCompatibility } from "../utils/uomQtyAdapter";
 
 interface DocumentsResponse {
   documents: Document[];
@@ -232,12 +233,6 @@ interface ProcessedDataItem {
   existItems?: boolean;
 }
 
-type StatisticalEntry = {
-  UOM: string;
-  quantity: number;
-  confidence?: number;
-};
-
 interface JobCargoItem {
   countryOfOrigin: string;
   countryOfOrigin_confidence?: number;
@@ -353,7 +348,7 @@ interface SealnetJobCargoItem {
   declaredQty_confidence?: number;
   declaredUOM?: string;
   declaredUOM_confidence?: number;
-  statisticalEntries?: StatisticalEntry[];
+  statisticalEntries?: string;
   statisticalDetails?: string;
   itemAmount?: number;
   itemAmount_confidence?: number;
@@ -402,7 +397,7 @@ interface DisplayJobCargoItem {
   extraDescription_confidence?: number;
   statisticalDetails?: string;
   statisticalDetails_confidence?: number;
-  statisticalEntries?: StatisticalEntry[];
+  statisticalEntries?: string;
   sourceDataIndex?: number;
   sourceItemIndex?: number;
   // K9-specific fields
@@ -517,20 +512,6 @@ function DocumentsPage() {
     }
 
     return false;
-  };
-
-  const formatStatisticalDetailsForDisplay = (
-    details?: Array<{ UOM: string; quantity: number }>
-  ): string => {
-    if (!details || details.length === 0) {
-      return "";
-    }
-    return details
-      .map((detail) =>
-        `${detail.quantity ?? ""} ${detail.UOM || ""}`.trim()
-      )
-      .filter((entry) => entry.length > 0)
-      .join(", ");
   };
 
   // Convert API data to UI format
@@ -702,105 +683,71 @@ function DocumentsPage() {
     dataArray.forEach((dataItem, dataIndex) => {
       if (dataItem.items && Array.isArray(dataItem.items)) {
         dataItem.items.forEach((item, itemIndex) => {
-          const baseStatisticalEntries = Array.isArray(item.statisticalUOM)
-            ? item.statisticalUOM.map((uom) => ({
-                UOM: uom.UOM,
-                quantity: uom.quantity,
-                confidence: uom.confidence,
-              }))
-            : [];
-          const statisticalUOMString =
-            typeof item.statisticalUOM === "string"
-              ? item.statisticalUOM.trim()
-              : "";
-
-          const derivedStatisticalQty =
-            item.statisticalQty ??
-            baseStatisticalEntries[0]?.quantity ??
-            item.declaredQty ??
-            0;
-          const derivedStatisticalUOM =
-            baseStatisticalEntries[0]?.UOM ||
-            statisticalUOMString ||
-            item.declaredUOM ||
-            "";
-          const derivedStatisticalUOMConfidence =
-            item.statisticalUOM_confidence ??
-            baseStatisticalEntries[0]?.confidence ??
-            item.statisticalQty_confidence;
-          const statisticalEntries =
-            baseStatisticalEntries.length > 0
-              ? baseStatisticalEntries
-              : derivedStatisticalUOM
-                ? [
-                    {
-                      UOM: derivedStatisticalUOM,
-                      quantity: derivedStatisticalQty,
-                      confidence: derivedStatisticalUOMConfidence,
-                    },
-                  ]
-                : [];
-          const statisticalDetailsDisplay =
-            formatStatisticalDetailsForDisplay(statisticalEntries);
+          const normalizedItem = withLegacyCompatibility(
+            item as unknown as Record<string, unknown>
+          ) as any;
+          const canonical = getCanonicalUomQty(normalizedItem);
+          const statisticalEntries = canonical.uom ?? "";
+          const statisticalDetailsDisplay = 'statisticalDetailsDisplay';
 
           if (isSealnet) {
             sealnetItems.push({
               id: `${dataIndex}-${itemIndex}`,
-              productCode: item.productCode || "",
-              productCode_confidence: item.productCode_confidence,
-              hsCode: item.hsCode || "",
-              hsCode_confidence: item.hsCode_confidence,
-              declaredQty: item.declaredQty,
-              declaredQty_confidence: item.declaredQty_confidence,
-              declaredUOM: item.declaredUOM,
-              declaredUOM_confidence: item.declaredUOM_confidence,
+              productCode: normalizedItem.productCode || "",
+              productCode_confidence: normalizedItem.productCode_confidence,
+              hsCode: normalizedItem.hsCode || "",
+              hsCode_confidence: normalizedItem.hsCode_confidence,
+              declaredQty: normalizedItem.declaredQty,
+              declaredQty_confidence: normalizedItem.declaredQty_confidence,
+              declaredUOM: normalizedItem.declaredUOM,
+              declaredUOM_confidence: normalizedItem.declaredUOM_confidence,
               statisticalEntries,
               statisticalDetails: statisticalDetailsDisplay,
-              itemAmount: item.itemAmount,
-              itemAmount_confidence: item.itemAmount_confidence,
-              itemDescription: item.itemDescription,
-              itemDescription_confidence: item.itemDescription_confidence,
-              extraDescription: item.extraDescription,
-              extraDescription_confidence: item.extraDescription_confidence,
+              itemAmount: normalizedItem.itemAmount,
+              itemAmount_confidence: normalizedItem.itemAmount_confidence,
+              itemDescription: normalizedItem.itemDescription,
+              itemDescription_confidence: normalizedItem.itemDescription_confidence,
+              extraDescription: normalizedItem.extraDescription,
+              extraDescription_confidence: normalizedItem.extraDescription_confidence,
             });
           }
 
           allItems.push({
             id: `${dataIndex}-${itemIndex}`,
-            countryOfOrigin: item.countryOfOrigin || "",
-            countryOfOrigin_confidence: item.countryOfOrigin_confidence,
-            declaredQty: item.declaredQty || 0,
-            declaredQty_confidence: item.declaredQty_confidence,
-            declaredUOM: item.declaredUOM || "",
-            declaredUOM_confidence: item.declaredUOM_confidence,
-            hsCode: item.hsCode || "",
-            hsCode_confidence: item.hsCode_confidence,
-            itemAmount: item.itemAmount || 0,
-            itemAmount_confidence: item.itemAmount_confidence,
-            itemDescription: item.itemDescription || "",
-            itemDescription_confidence: item.itemDescription_confidence,
-            itemDescription2: item.itemDescription2 || "",
-            itemDescription2_confidence: item.itemDescription2_confidence,
-            itemDescription3: item.itemDescription3 || "",
-            itemDescription3_confidence: item.itemDescription3_confidence,
-            statisticalQty: derivedStatisticalQty || 0,
-            statisticalQty_confidence: item.statisticalQty_confidence,
-            statisticalUOM: derivedStatisticalUOM,
-            statisticalUOM_confidence: derivedStatisticalUOMConfidence,
-            productCode: item.productCode || "",
-            productCode_confidence: item.productCode_confidence,
-            extraDescription: item.extraDescription || "",
-            extraDescription_confidence: item.extraDescription_confidence,
+            countryOfOrigin: normalizedItem.countryOfOrigin || "",
+            countryOfOrigin_confidence: normalizedItem.countryOfOrigin_confidence,
+            declaredQty: normalizedItem.declaredQty || 0,
+            declaredQty_confidence: normalizedItem.declaredQty_confidence,
+            declaredUOM: normalizedItem.declaredUOM || "",
+            declaredUOM_confidence: normalizedItem.declaredUOM_confidence,
+            hsCode: normalizedItem.hsCode || "",
+            hsCode_confidence: normalizedItem.hsCode_confidence,
+            itemAmount: normalizedItem.itemAmount || 0,
+            itemAmount_confidence: normalizedItem.itemAmount_confidence,
+            itemDescription: normalizedItem.itemDescription || "",
+            itemDescription_confidence: normalizedItem.itemDescription_confidence,
+            itemDescription2: normalizedItem.itemDescription2 || "",
+            itemDescription2_confidence: normalizedItem.itemDescription2_confidence,
+            itemDescription3: normalizedItem.itemDescription3 || "",
+            itemDescription3_confidence: normalizedItem.itemDescription3_confidence,
+            statisticalQty: canonical.qty || 0,
+            statisticalQty_confidence: normalizedItem.statisticalQty_confidence,
+            statisticalUOM: canonical.uom || "",
+            statisticalUOM_confidence: normalizedItem.statisticalQty_confidence,
+            productCode: normalizedItem.productCode || "",
+            productCode_confidence: normalizedItem.productCode_confidence,
+            extraDescription: normalizedItem.extraDescription || "",
+            extraDescription_confidence: normalizedItem.extraDescription_confidence,
             statisticalDetails: statisticalDetailsDisplay,
-            statisticalDetails_confidence: derivedStatisticalUOMConfidence,
+            statisticalDetails_confidence: normalizedItem.statisticalQty_confidence,
             statisticalEntries,
             sourceDataIndex: dataIndex,
             sourceItemIndex: itemIndex,
             // K9-specific fields
-            packQtyToBeReleased: item.packQtyToBeReleased,
-            packQtyToBeReleased_confidence: item.packQtyToBeReleased_confidence,
-            packUOMToBeReleased: item.packUOMToBeReleased,
-            packUOMToBeReleased_confidence: item.packUOMToBeReleased_confidence,
+            packQtyToBeReleased: normalizedItem.packQtyToBeReleased,
+            packQtyToBeReleased_confidence: normalizedItem.packQtyToBeReleased_confidence,
+            packUOMToBeReleased: normalizedItem.packUOMToBeReleased,
+            packUOMToBeReleased_confidence: normalizedItem.packUOMToBeReleased_confidence,
           });
         });
       }
