@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
   pull_request:
     branches:
       - main
@@ -43,3 +44,10 @@ jobs:
           aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_NAME }} --delete --cache-control max-age=31536000
           # Set cache-control for index.html to prevent caching
           aws s3 cp dist/index.html s3://${{ secrets.S3_BUCKET_NAME }}/index.html --cache-control no-cache
+
+      - name: Deploy to S3 (dev)
+        if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+        run: |
+          aws s3 sync dist/ s3://kaizen-frontend-bucket --delete --cache-control max-age=31536000
+          # Set cache-control for index.html to prevent caching
+          aws s3 cp dist/index.html s3://kaizen-frontend-bucket/index.html --cache-control no-cache
