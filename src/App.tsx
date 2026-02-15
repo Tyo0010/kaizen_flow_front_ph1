@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Login from './pages/login'
 import MainPage from './pages/upload'
@@ -32,6 +32,7 @@ interface User {
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const Router = import.meta.env.PROD ? HashRouter : BrowserRouter
 
   useEffect(() => {
     // Check for stored user and token
