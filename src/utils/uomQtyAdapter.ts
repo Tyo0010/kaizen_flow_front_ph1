@@ -215,6 +215,30 @@ export const withCanonicalFromUiValues = <T extends Record<string, unknown>>(
     return withLegacyCompatibility(item);
   }
 
+  const rawExistingData = item["data"];
+  const existingDataEntries = Array.isArray(rawExistingData)
+    ? rawExistingData
+    : rawExistingData !== null && rawExistingData !== undefined
+      ? [rawExistingData]
+      : [];
+  const normalizedExistingData = existingDataEntries
+    .map(normalizeDataEntry)
+    .filter((entry): entry is DataEntry => Boolean(entry));
+
+  if (normalizedExistingData.length) {
+    const firstEntry = normalizedExistingData[0];
+    normalizedExistingData[0] = {
+      UOM: canonicalUom ?? firstEntry.UOM ?? null,
+      quantity: canonicalQty ?? firstEntry.quantity ?? null,
+      confidence: canonicalConfidence ?? firstEntry.confidence ?? null,
+    };
+
+    return withLegacyCompatibility({
+      ...item,
+      data: normalizedExistingData,
+    });
+  }
+
   const seeded = {
     ...item,
     data: [

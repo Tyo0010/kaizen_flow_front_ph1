@@ -4,6 +4,11 @@ import { Input } from '../ui/input'
 // Interfaces
 export interface DisplayJobCargoItem {
   id: string;
+  data?: Array<{
+    UOM?: string | null;
+    quantity?: number | null;
+    confidence?: number | null;
+  }> | null;
   countryOfOrigin: string;
   countryOfOrigin_confidence?: number;
   declaredQty: number;

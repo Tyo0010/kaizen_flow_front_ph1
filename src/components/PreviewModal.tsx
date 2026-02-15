@@ -978,6 +978,7 @@ const convertUIDataToAPI = (
       uiData.generalInformation.robRocForConsignor_confidence,
     items: uiData.jobCargo.items.map((item) => {
       const baseItem: Record<string, unknown> = {
+        data: item.data ?? null,
         countryOfOrigin: item.countryOfOrigin,
         countryOfOrigin_confidence: item.countryOfOrigin_confidence,
         hsCode: item.hsCode,
