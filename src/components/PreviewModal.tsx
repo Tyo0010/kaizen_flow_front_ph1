@@ -11,6 +11,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
+import { Badge } from "./ui/badge";
 import { updateProcessedData, generateExcelFiles } from "../utils/api";
 import { withCanonicalFromUiValues } from "../utils/uomQtyAdapter";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -229,12 +230,19 @@ interface SealnetData {
   existItems?: boolean;
 }
 
+interface SplitOutput {
+  suffix: string;
+  label: string;
+  items: DisplayJobCargoItem[];
+}
+
 interface ExtractedPreviewData {
   generalInformation: GeneralInformation;
   jobCargo: JobCargo;
   sealnetData?: SealnetData;
   templateType?: "ALDEC" | "SEALNET";
   rawData?: any;
+  splitOutputs?: SplitOutput[];
 }
 
 interface SessionDocument {
@@ -1027,6 +1035,28 @@ const convertUIDataToAPI = (
     }),
   };
 
+  // Preserve _split_outputs so the backend can generate split Excel files
+  if (uiData.splitOutputs && uiData.splitOutputs.length > 0) {
+    const splitOutputsMap: Record<string, any> = {};
+    for (const split of uiData.splitOutputs) {
+      splitOutputsMap[split.suffix] = {
+        items: split.items.map((item) => ({
+          countryOfOrigin: item.countryOfOrigin,
+          hsCode: item.hsCode,
+          statisticalUOM: item.statisticalUOM,
+          statisticalQty: item.statisticalQty,
+          declaredQty: item.declaredQty,
+          declaredUOM: item.declaredUOM,
+          itemAmount: item.itemAmount,
+          itemDescription: item.itemDescription,
+          itemDescription2: item.itemDescription2,
+          itemDescription3: item.itemDescription3,
+        })),
+      };
+    }
+    (apiDataItem as any)._split_outputs = splitOutputsMap;
+  }
+
   return [apiDataItem];
 };
 
@@ -1642,9 +1672,14 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
               defaultValue="general"
               className="flex flex-col flex-1 min-h-0"
             >
-              <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+              <TabsList className={`grid w-full flex-shrink-0`} style={{ gridTemplateColumns: `repeat(${2 + (extractedData.splitOutputs?.length || 0)}, minmax(0, 1fr))` }}>
                 <TabsTrigger value="general">General Information</TabsTrigger>
                 <TabsTrigger value="cargo">Job Cargo</TabsTrigger>
+                {extractedData.splitOutputs?.map((split) => (
+                  <TabsTrigger key={`split-${split.suffix}`} value={`split-${split.suffix}`}>
+                    {split.label} ({split.items.length})
+                  </TabsTrigger>
+                ))}
               </TabsList>
 
               <div className="flex-1 overflow-auto w-full">
@@ -2433,6 +2468,29 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                     getConfidenceColor={getConfidenceColor}
                   />
                 </TabsContent>
+
+                {/* Split output tabs – additional declaration documents */}
+                {extractedData.splitOutputs?.map((split) => (
+                  <TabsContent key={`split-${split.suffix}`} value={`split-${split.suffix}`} className="space-y-4 mt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                        Split Document
+                      </Badge>
+                      <span className="text-sm text-gray-500">
+                        {split.items.length} item{split.items.length !== 1 ? 's' : ''} separated by split rule
+                      </span>
+                    </div>
+                    <DynamicJobCargoTable
+                      selectedFormType={selectedFormType}
+                      onFormTypeChange={setSelectedFormType}
+                      showFormSelector={false}
+                      items={split.items}
+                      isEditMode={false}
+                      onUpdate={() => {}}
+                      getConfidenceColor={getConfidenceColor}
+                    />
+                  </TabsContent>
+                ))}
               </div>
             </Tabs>
           </div>

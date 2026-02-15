@@ -358,6 +358,12 @@ interface SealnetJobCargoItem {
   extraDescription_confidence?: number;
 }
 
+interface SplitOutput {
+  suffix: string;
+  label: string;
+  items: DisplayJobCargoItem[];
+}
+
 interface ExtractedData {
   generalInformation: GeneralInformation;
   jobCargo: JobCargo;
@@ -367,6 +373,7 @@ interface ExtractedData {
   };
   templateType?: "ALDEC" | "SEALNET";
   rawData?: ProcessedDataItem[];
+  splitOutputs?: SplitOutput[];
 }
 
 interface DisplayJobCargoItem {
@@ -761,7 +768,79 @@ function DocumentsPage() {
         : undefined,
       templateType: isSealnet ? "SEALNET" : "ALDEC",
       rawData: dataArray,
+      splitOutputs: buildSplitOutputs(firstItem),
     };
+  };
+
+  /**
+   * Build split output sections from _split_outputs embedded in the processed data.
+   * Each split output becomes an additional declaration/job-cargo document.
+   */
+  const buildSplitOutputs = (dataItem: any): SplitOutput[] | undefined => {
+    if (!dataItem || !dataItem._split_outputs) return undefined;
+
+    const splits: SplitOutput[] = [];
+    for (const [suffix, splitPayload] of Object.entries(dataItem._split_outputs as Record<string, any>)) {
+      const splitItems: DisplayJobCargoItem[] = [];
+      const items = (splitPayload as any)?.items;
+      if (Array.isArray(items)) {
+        items.forEach((item: any, idx: number) => {
+          const normalizedItem = withLegacyCompatibility(
+            item as unknown as Record<string, unknown>
+          ) as any;
+          const canonical = getCanonicalUomQty(normalizedItem);
+          const statisticalEntries = canonical.uom ?? "";
+
+          splitItems.push({
+            id: `split-${suffix}-${idx}`,
+            countryOfOrigin: normalizedItem.countryOfOrigin || "",
+            countryOfOrigin_confidence: normalizedItem.countryOfOrigin_confidence,
+            declaredQty: normalizedItem.declaredQty || 0,
+            declaredQty_confidence: normalizedItem.declaredQty_confidence,
+            declaredUOM: normalizedItem.declaredUOM || "",
+            declaredUOM_confidence: normalizedItem.declaredUOM_confidence,
+            hsCode: normalizedItem.hsCode || "",
+            hsCode_confidence: normalizedItem.hsCode_confidence,
+            itemAmount: normalizedItem.itemAmount || 0,
+            itemAmount_confidence: normalizedItem.itemAmount_confidence,
+            itemDescription: normalizedItem.itemDescription || "",
+            itemDescription_confidence: normalizedItem.itemDescription_confidence,
+            itemDescription2: normalizedItem.itemDescription2 || "",
+            itemDescription2_confidence: normalizedItem.itemDescription2_confidence,
+            itemDescription3: normalizedItem.itemDescription3 || "",
+            itemDescription3_confidence: normalizedItem.itemDescription3_confidence,
+            statisticalQty: canonical.qty || 0,
+            statisticalQty_confidence: normalizedItem.statisticalQty_confidence,
+            statisticalUOM: canonical.uom || "",
+            statisticalUOM_confidence: normalizedItem.statisticalQty_confidence,
+            productCode: normalizedItem.productCode || "",
+            productCode_confidence: normalizedItem.productCode_confidence,
+            extraDescription: normalizedItem.extraDescription || "",
+            extraDescription_confidence: normalizedItem.extraDescription_confidence,
+            statisticalDetails: 'statisticalDetailsDisplay',
+            statisticalDetails_confidence: normalizedItem.statisticalQty_confidence,
+            statisticalEntries,
+            sourceDataIndex: 0,
+            sourceItemIndex: idx,
+            packQtyToBeReleased: normalizedItem.packQtyToBeReleased,
+            packQtyToBeReleased_confidence: normalizedItem.packQtyToBeReleased_confidence,
+            packUOMToBeReleased: normalizedItem.packUOMToBeReleased,
+            packUOMToBeReleased_confidence: normalizedItem.packUOMToBeReleased_confidence,
+          });
+        });
+      }
+
+      if (splitItems.length > 0) {
+        const label = suffix.charAt(0).toUpperCase() + suffix.slice(1);
+        splits.push({
+          suffix,
+          label: `Declaration (${label})`,
+          items: splitItems,
+        });
+      }
+    }
+
+    return splits.length > 0 ? splits : undefined;
   };
 
   useEffect(() => {
