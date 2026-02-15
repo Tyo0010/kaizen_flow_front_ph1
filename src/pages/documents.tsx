@@ -378,6 +378,11 @@ interface ExtractedData {
 
 interface DisplayJobCargoItem {
   id: string;
+  data?: Array<{
+    UOM?: string | null;
+    quantity?: number | null;
+    confidence?: number | null;
+  }> | null;
   countryOfOrigin: string;
   countryOfOrigin_confidence?: number;
   declaredQty: number;
@@ -695,7 +700,11 @@ function DocumentsPage() {
           ) as any;
           const canonical = getCanonicalUomQty(normalizedItem);
           const statisticalEntries = canonical.uom ?? "";
-          const statisticalDetailsDisplay = 'statisticalDetailsDisplay';
+          const statisticalDetailsDisplay = statisticalEntries;
+          const statisticalUomConfidence =
+            normalizedItem.statisticalUOM_confidence ??
+            canonical.confidence ??
+            normalizedItem.statisticalQty_confidence;
 
           if (isSealnet) {
             sealnetItems.push({
@@ -721,6 +730,7 @@ function DocumentsPage() {
 
           allItems.push({
             id: `${dataIndex}-${itemIndex}`,
+            data: normalizedItem.data ?? null,
             countryOfOrigin: normalizedItem.countryOfOrigin || "",
             countryOfOrigin_confidence: normalizedItem.countryOfOrigin_confidence,
             declaredQty: normalizedItem.declaredQty || 0,
@@ -740,13 +750,13 @@ function DocumentsPage() {
             statisticalQty: canonical.qty || 0,
             statisticalQty_confidence: normalizedItem.statisticalQty_confidence,
             statisticalUOM: canonical.uom || "",
-            statisticalUOM_confidence: normalizedItem.statisticalQty_confidence,
+            statisticalUOM_confidence: statisticalUomConfidence,
             productCode: normalizedItem.productCode || "",
             productCode_confidence: normalizedItem.productCode_confidence,
             extraDescription: normalizedItem.extraDescription || "",
             extraDescription_confidence: normalizedItem.extraDescription_confidence,
             statisticalDetails: statisticalDetailsDisplay,
-            statisticalDetails_confidence: normalizedItem.statisticalQty_confidence,
+            statisticalDetails_confidence: statisticalUomConfidence,
             statisticalEntries,
             sourceDataIndex: dataIndex,
             sourceItemIndex: itemIndex,
